@@ -1,17 +1,17 @@
+import random
+
 import datasets as ds
 import pytest
 from langchain.chat_models import init_chat_model
-from langchain_openai import ChatOpenAI
 
-from layout_prompter.models import (
-    MultipleSerializedOutputData,
-    ProcessedLayoutData,
-    SerializedOutputData,
-)
+from layout_prompter import LayoutPrompter
+from layout_prompter.models import ProcessedLayoutData
+from layout_prompter.modules.rankers import LayoutPrompterRanker
 from layout_prompter.modules.selectors import ContentAwareSelector
-from layout_prompter.modules.serializers import ContentAwareSerializer, SerializerInput
+from layout_prompter.modules.serializers import ContentAwareSerializer
 from layout_prompter.settings import PosterLayoutSettings
-from layout_prompter.testing import LayoutPrompterTestCase
+from layout_prompter.utils.testing import LayoutPrompterTestCase
+from layout_prompter.visualizers import ContentAwareVisualizer
 
 
 class TestContentAwareGeneration(LayoutPrompterTestCase):
@@ -30,31 +30,49 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
     def num_return(self) -> int:
         return 10
 
-    def test_content_aware_generation(
-        self, dataset: ds.DatasetDict, num_prompt: int, num_return: int
-    ):
+    def test_content_aware_generation(self, dataset: ds.DatasetDict, num_prompt: int):
         settings = PosterLayoutSettings()
 
-        selector = ContentAwareSelector(
-            num_prompt=num_prompt,
-            canvas_size=settings.canvas_size,
-            examples=[ProcessedLayoutData(**example) for example in dataset["train"]],
+        examples = [ProcessedLayoutData(**example) for example in dataset["train"]]
+
+        # idx = random.choice(range(len(dataset["test"])))
+        idx = 309
+        print(f"{idx=}")
+
+        test_data = ProcessedLayoutData(**dataset["test"][idx])
+
+        layout_prompter = LayoutPrompter(
+            selector=ContentAwareSelector(
+                num_prompt=num_prompt,
+                canvas_size=settings.canvas_size,
+                examples=examples,
+            ),
+            serializer=ContentAwareSerializer(
+                layout_domain=settings.domain,
+            ),
+            llm=init_chat_model(
+                model_provider="openai",
+                model="gpt-4o",
+            ),
+            ranker=LayoutPrompterRanker(),
         )
-        test_data = ProcessedLayoutData(**dataset["test"][0])
-        candidates = selector.select_examples(test_data)
+        outputs = layout_prompter.invoke(input=test_data)
 
-        serializer = ContentAwareSerializer()
-        llm = init_chat_model(model_provider="openai", model="gpt-4o", n=num_return)
-
-        chain = serializer | llm.with_structured_output(SerializedOutputData)
-
-        output = chain.invoke(
-            input=SerializerInput(query=test_data, candidates=candidates)
+        visualizer = ContentAwareVisualizer(
+            canvas_size=settings.canvas_size, labels=settings.labels
         )
+        visualizer_config = {
+            "resize_ratio": 2.0,
+            "bg_image": test_data.content_image,
+            "content_bboxes": test_data.discrete_content_bboxes,
+        }
 
-        # for output in chain.stream(
-        #     input=SerializerInput(query=test_data, candidates=candidates)
-        # ):
-        #     print(output)
+        save_dir = self.PROJECT_ROOT / "generated" / "content_aware"
+        save_dir.mkdir(parents=True, exist_ok=True)
 
-        breakpoint()
+        for i, output in enumerate(outputs):
+            image = visualizer.invoke(
+                output,
+                config={"configurable": visualizer_config},
+            )
+            image.save(save_dir / f"{idx=},{i=}.png")

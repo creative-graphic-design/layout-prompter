@@ -3,9 +3,12 @@ import pytest
 
 from layout_prompter.models import ProcessedLayoutData
 from layout_prompter.modules.selectors import ContentAwareSelector
-from layout_prompter.modules.serializers import ContentAwareSerializer, SerializerInput
+from layout_prompter.modules.serializers import (
+    ContentAwareSerializer,
+    LayoutSerializerInput,
+)
 from layout_prompter.settings import PosterLayoutSettings
-from layout_prompter.testing import LayoutPrompterTestCase
+from layout_prompter.utils.testing import LayoutPrompterTestCase
 
 
 class TestContentAwareSerializer(LayoutPrompterTestCase):
@@ -20,7 +23,7 @@ class TestContentAwareSerializer(LayoutPrompterTestCase):
     def num_prompt(self) -> int:
         return 10
 
-    def test_content_aware_serializer(self, dataset: ds.DatasetDict, num_prompt: int):
+    def test_content_aware_serializer(self, dataset: ds.DatasetDict):
         settings = PosterLayoutSettings()
         selector = ContentAwareSelector(
             canvas_size=settings.canvas_size,
@@ -32,7 +35,7 @@ class TestContentAwareSerializer(LayoutPrompterTestCase):
         serializer = ContentAwareSerializer()
 
         prompt = serializer.invoke(
-            input=SerializerInput(query=test_data, candidates=candidates)
+            input=LayoutSerializerInput(query=test_data, candidates=candidates)
         )
         for message in prompt.to_messages():
             message.pretty_print()

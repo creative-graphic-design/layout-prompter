@@ -13,10 +13,19 @@ def normalize_bboxes(bboxes, w: int, h: int) -> np.ndarray:
 
 def decapsulate(bboxes: np.ndarray):
     if len(bboxes.shape) == 2:
-        x1, y1, x2, y2 = bboxes.T
+        return bboxes.T
     else:
-        # FIXME: Change torch impl. to numpy impl.
-        # x1, y1, x2, y2 = bboxes.permute(2, 0, 1)
-        raise NotImplementedError
+        return np.transpose(bboxes, (2, 0, 1))
 
-    return x1, y1, x2, y2
+
+def convert_ltwh_to_ltrb(bbox: np.ndarray):
+    if len(bbox.shape) == 1:
+        left, top, width, height = bbox
+        right = left + width
+        bottom = top + height
+        return np.array((left, top, right, bottom))
+
+    left, top, width, height = decapsulate(bbox)
+    right = left + width
+    bottom = top + height
+    return np.stack([left, top, right, bottom], axis=-1)

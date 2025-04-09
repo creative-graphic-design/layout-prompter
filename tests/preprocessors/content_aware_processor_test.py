@@ -2,7 +2,7 @@ import datasets as ds
 
 from layout_prompter.preprocessors import ContentAwareProcessor
 from layout_prompter.settings import PosterLayoutSettings
-from layout_prompter.testing import LayoutPrompterTestCase
+from layout_prompter.utils.testing import LayoutPrompterTestCase
 
 
 class TestContentAwareProcessor(LayoutPrompterTestCase):

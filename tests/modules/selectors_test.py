@@ -4,7 +4,7 @@ import pytest
 from layout_prompter.models import ProcessedLayoutData
 from layout_prompter.modules.selectors import ContentAwareSelector
 from layout_prompter.settings import PosterLayoutSettings
-from layout_prompter.testing import LayoutPrompterTestCase
+from layout_prompter.utils.testing import LayoutPrompterTestCase
 
 
 class TestContentAwareCandidateStore(LayoutPrompterTestCase):

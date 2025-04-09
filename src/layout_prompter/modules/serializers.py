@@ -1,6 +1,7 @@
 import json
 from typing import Any, Final, List
 
+from langchain_core.prompt_values import ChatPromptValue
 from langchain_core.prompts import (
     ChatPromptTemplate,
     FewShotChatMessagePromptTemplate,
@@ -14,8 +15,7 @@ from pydantic import BaseModel, field_validator
 from layout_prompter.models import Coordinates, ProcessedLayoutData, SerializedData
 
 SYSTEM_PROMPT: Final[str] = """\
-Please generate a layout based on the given information. 
-You need to ensure that the generated layout looks realistic, with elements well aligned and avoiding unnecessary overlap.
+Please generate a layout based on the given information. You need to ensure that the generated layout looks realistic, with elements well aligned and avoiding unnecessary overlap.
 
 # Preamble
 ## Task Description
@@ -43,12 +43,12 @@ SERIALIZED_LAYOUT: Final[str] = """\
 """
 
 
-class SerializerInput(BaseModel):
+class LayoutSerializerInput(BaseModel):
     query: ProcessedLayoutData
     candidates: List[ProcessedLayoutData]
 
 
-class Serializer(BaseModel, Runnable):
+class LayoutSerializer(BaseModel, Runnable):
     TASK_TYPE: str = ""
     UNK_TOKEN: Final[str] = "<unk>"
 
@@ -74,7 +74,7 @@ class Serializer(BaseModel, Runnable):
         return s.replace("{", "{{").replace("}", "}}")
 
 
-class ContentAwareSerializer(Serializer):
+class ContentAwareSerializer(LayoutSerializer):
     TASK_TYPE: str = (
         "content-aware layout generation\n"
         "Please place the following elements to avoid salient content, and underlay must be the background of text or logo."
@@ -118,10 +118,10 @@ class ContentAwareSerializer(Serializer):
 
     def invoke(
         self,
-        input: SerializerInput,
+        input: LayoutSerializerInput,
         config: RunnableConfig | None = None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> ChatPromptValue:
         example_prompt = ChatPromptTemplate.from_messages(
             [
                 CONTENT_AWARE_CONSTRAINT,
@@ -172,4 +172,5 @@ class ContentAwareSerializer(Serializer):
                 "type_constraint": self._get_type_constraint(input.query),
             }
         )
+        assert isinstance(final_prompt, ChatPromptValue)
         return final_prompt

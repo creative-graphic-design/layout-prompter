@@ -6,9 +6,12 @@ from langchain.chat_models import init_chat_model
 
 from layout_prompter.models import ProcessedLayoutData, SerializedOutputData
 from layout_prompter.modules.selectors import ContentAwareSelector
-from layout_prompter.modules.serializers import ContentAwareSerializer, SerializerInput
+from layout_prompter.modules.serializers import (
+    ContentAwareSerializer,
+    LayoutSerializerInput,
+)
 from layout_prompter.settings import PosterLayoutSettings
-from layout_prompter.testing import LayoutPrompterTestCase
+from layout_prompter.utils.testing import LayoutPrompterTestCase
 from layout_prompter.visualizers import ContentAwareVisualizer, generate_color_palette
 
 
@@ -69,7 +72,7 @@ class TestContentAwareVisualizer(LayoutPrompterTestCase):
             serializer | llm.with_structured_output(SerializedOutputData) | visualizer
         )
         image = chain.invoke(
-            input=SerializerInput(query=test_data, candidates=candidates),
+            input=LayoutSerializerInput(query=test_data, candidates=candidates),
             config={
                 "configurable": {
                     "resize_ratio": 2.0,

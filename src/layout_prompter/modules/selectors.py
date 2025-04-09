@@ -1,4 +1,5 @@
 import random
+from abc import abstractmethod
 from typing import Any, List, Optional, Tuple
 
 import cv2
@@ -29,6 +30,11 @@ class LayoutSelector(BaseExampleSelector, BaseModel):
         self.examples = self.examples[: self.candidate_size]
 
         return self
+
+    def select_examples(  # type: ignore[override]
+        self, input_variables: ProcessedLayoutData
+    ) -> List[ProcessedLayoutData]:
+        raise NotImplementedError
 
     def add_example(self, example: ProcessedLayoutData) -> Any:
         self.examples.append(example)

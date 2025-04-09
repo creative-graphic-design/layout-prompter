@@ -9,6 +9,9 @@ class Coordinates(BaseModel):
     width: int
     height: int
 
+    def to_tuple(self):
+        return (self.left, self.top, self.width, self.height)
+
 
 class SerializedData(BaseModel):
     class_name: str
