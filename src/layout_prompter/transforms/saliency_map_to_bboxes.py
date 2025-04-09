@@ -3,7 +3,6 @@ from typing import Any, List, Optional, Tuple, Union
 import cv2
 import numpy as np
 from langchain_core.runnables import Runnable
-from PIL import Image
 from pydantic import BaseModel
 
 from layout_prompter.typehints import PilImage

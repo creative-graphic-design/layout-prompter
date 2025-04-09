@@ -28,6 +28,14 @@ class TaskSettings(BaseSettings):
         return (YamlConfigSettingsSource(settings_cls),)
 
 
+class Rico25Settings(TaskSettings):
+    model_config = SettingsConfigDict(
+        yaml_file=pathlib.Path(__file__).resolve().parents[2]
+        / "settings"
+        / "rico25.yaml"
+    )
+
+
 class PosterLayoutSettings(TaskSettings):
     model_config = SettingsConfigDict(
         yaml_file=pathlib.Path(__file__).resolve().parents[2]

@@ -1,0 +1,31 @@
+name: rico25
+domain: android
+canvas_size:
+  width: 90
+  height: 160
+labels:
+  - text
+  - image
+  - icon
+  - list-item
+  - text-button
+  - toolbar
+  - web-view
+  - input
+  - card
+  - advertisement
+  - background-image
+  - drawer
+  - radio-button
+  - checkbox
+  - multi-tab
+  - pager-indicator
+  - modal
+  - on/off-switch
+  - slider
+  - map-view
+  - button-bar
+  - video
+  - bottom-navigation
+  - number-stepper
+  - date-picker
