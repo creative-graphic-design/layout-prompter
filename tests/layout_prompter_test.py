@@ -3,6 +3,7 @@ import random
 import datasets as ds
 import pytest
 from langchain.chat_models import init_chat_model
+from tqdm.auto import tqdm
 
 from layout_prompter import LayoutPrompter
 from layout_prompter.models import ProcessedLayoutData
@@ -28,15 +29,18 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
 
     @pytest.fixture
     def num_return(self) -> int:
-        return 10
+        return 5
 
     def test_content_aware_generation(self, dataset: ds.DatasetDict, num_prompt: int):
         settings = PosterLayoutSettings()
 
-        examples = [ProcessedLayoutData(**example) for example in dataset["train"]]
+        examples = [
+            ProcessedLayoutData(**example)
+            for example in tqdm(dataset["train"], desc="Loading examples")
+        ]
 
-        # idx = random.choice(range(len(dataset["test"])))
-        idx = 309
+        idx = random.choice(range(len(dataset["test"])))
+        idx = 443
         print(f"{idx=}")
 
         test_data = ProcessedLayoutData(**dataset["test"][idx])
@@ -56,7 +60,9 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
             ),
             ranker=LayoutPrompterRanker(),
         )
-        outputs = layout_prompter.invoke(input=test_data)
+        outputs = layout_prompter.invoke(
+            input=test_data, config={"configurable": {"num_return": 5}}
+        )
 
         visualizer = ContentAwareVisualizer(
             canvas_size=settings.canvas_size, labels=settings.labels
@@ -75,4 +81,4 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
                 output,
                 config={"configurable": visualizer_config},
             )
-            image.save(save_dir / f"{idx=},{i=}.png")
+            image.save(save_dir / f"{idx=}, {i=}.png")

@@ -42,6 +42,7 @@ class ContentAwareProcessor(Processor):
     def _process_train_data(
         self,
         encoded_image: str,
+        encoded_saliency_map: str,
         anns: Dict[str, Any],
         map_w: int,
         map_h: int,
@@ -66,12 +67,14 @@ class ContentAwareProcessor(Processor):
             labels=labels,
             content_bboxes=content_bboxes,
             encoded_image=encoded_image,
+            encoded_saliency_map=encoded_saliency_map,
             canvas_size=self.canvas_size,
         )
 
     def _process_test_data(
         self,
         encoded_image: str,
+        encoded_saliency_map: str,
         content_bboxes: np.ndarray,
     ) -> LayoutData:
         if len(self._possible_labels) == 0:
@@ -87,6 +90,7 @@ class ContentAwareProcessor(Processor):
             bboxes=bboxes,
             labels=labels,
             content_bboxes=content_bboxes,
+            encoded_saliency_map=encoded_saliency_map,
             encoded_image=encoded_image,
             canvas_size=self.canvas_size,
         )
@@ -105,6 +109,7 @@ class ContentAwareProcessor(Processor):
         # Convert the content image to base64 string
         content_image = example["content_image"]
         encoded_image = pil_to_base64(content_image)
+        encoded_saliency_map = pil_to_base64(saliency_map)
 
         anns = example["annotations"]
         is_train = anns is not None
@@ -116,11 +121,13 @@ class ContentAwareProcessor(Processor):
                 map_w=map_w,
                 map_h=map_h,
                 encoded_image=encoded_image,
+                encoded_saliency_map=encoded_saliency_map,
                 content_bboxes=content_bboxes,
             )
             if is_train
             else self._process_test_data(
                 encoded_image=encoded_image,
+                encoded_saliency_map=encoded_saliency_map,
                 content_bboxes=content_bboxes,
             )
         )

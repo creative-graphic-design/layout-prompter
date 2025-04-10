@@ -1,13 +1,12 @@
 from functools import cached_property
-from typing import Optional, Union
+from typing import Optional
 
 import pydantic_numpy.typing as pnd
-from pydantic import BaseModel, field_validator
-from pydantic_numpy import np_array_pydantic_annotated_typing
+from pydantic import BaseModel
 
 from layout_prompter.settings import CanvasSize
 from layout_prompter.typehints import PilImage
-from layout_prompter.utils import base64_to_pil, pil_to_base64
+from layout_prompter.utils import base64_to_pil
 
 
 class LayoutData(BaseModel):
@@ -16,12 +15,18 @@ class LayoutData(BaseModel):
     canvas_size: CanvasSize
 
     encoded_image: Optional[str]
+    encoded_saliency_map: Optional[str]
     content_bboxes: Optional[pnd.Np2DArray]
 
     @cached_property
     def content_image(self) -> PilImage:
         assert self.encoded_image is not None
         return base64_to_pil(self.encoded_image)
+
+    @cached_property
+    def saliency_map(self) -> PilImage:
+        assert self.encoded_saliency_map is not None
+        return base64_to_pil(self.encoded_saliency_map)
 
     def is_content_aware(self) -> bool:
         return self.encoded_image is not None and self.content_bboxes is not None

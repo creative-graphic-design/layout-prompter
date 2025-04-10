@@ -13,6 +13,7 @@ from langchain_core.runnables.config import RunnableConfig
 from pydantic import BaseModel, field_validator
 
 from layout_prompter.models import Coordinates, ProcessedLayoutData, SerializedData
+from layout_prompter.utils.image import base64_to_pil, pil_to_base64
 
 SYSTEM_PROMPT: Final[str] = """\
 Please generate a layout based on the given information. You need to ensure that the generated layout looks realistic, with elements well aligned and avoiding unnecessary overlap.
@@ -124,43 +125,102 @@ class ContentAwareSerializer(LayoutSerializer):
     ) -> ChatPromptValue:
         example_prompt = ChatPromptTemplate.from_messages(
             [
-                CONTENT_AWARE_CONSTRAINT,
-                SERIALIZED_LAYOUT,
-            ]
-        )
-        example_prompt = ChatPromptTemplate.from_messages(
-            [
-                ("human", CONTENT_AWARE_CONSTRAINT),
+                (
+                    "human",
+                    [
+                        CONTENT_AWARE_CONSTRAINT,
+                        # {
+                        #     "type": "image_url",
+                        #     "image_url": {
+                        #         "url": "data:image/png;base64,{content_image}",
+                        #     },
+                        # },
+                        # {
+                        #     "type": "image_url",
+                        #     "image_url": {
+                        #         "url": "data:image/jpeg;base64,{saliency_map}",
+                        #     },
+                        # },
+                    ],
+                ),
                 ("ai", SERIALIZED_LAYOUT),
             ]
         )
+
+        candidate_content_images = [c.content_image.copy() for c in input.candidates]
+        for content_image in candidate_content_images:
+            content_image.thumbnail((256, 256))
+
+        candidate_saliency_maps = [c.saliency_map.copy() for c in input.candidates]
+        for saliency_map in candidate_saliency_maps:
+            saliency_map.thumbnail((256, 256))
+
         examples = [
             {
                 "content_constraint": self._get_content_constraint(candidate),
                 "type_constraint": self._get_type_constraint(candidate),
                 "serialized_layout": self._get_serialized_layout(candidate),
+                # "content_image": pil_to_base64(content_image),
+                # "saliency_map": pil_to_base64(saliency_map),
             }
-            for candidate in input.candidates
+            for content_image, saliency_map, candidate in zip(
+                candidate_content_images, candidate_saliency_maps, input.candidates
+            )
         ]
 
         few_shot_prompt = FewShotChatMessagePromptTemplate(
             examples=examples,
             example_prompt=example_prompt,
         )
-        system_prompt = SystemMessagePromptTemplate.from_template(
-            template=SYSTEM_PROMPT,
-        )
-        human_prompt = HumanMessagePromptTemplate.from_template(
-            template=CONTENT_AWARE_CONSTRAINT
-        )
+
+        # system_prompt = SystemMessagePromptTemplate.from_template(
+        #     template=SYSTEM_PROMPT,
+        # )
+        # human_prompt = HumanMessagePromptTemplate.from_template(
+        #     template=CONTENT_AWARE_CONSTRAINT
+        # )
+
+        # prompt = ChatPromptTemplate.from_messages(
+        #     [
+        #         system_prompt,
+        #         few_shot_prompt,
+        #         human_prompt,
+        #     ]
+        # )
 
         prompt = ChatPromptTemplate.from_messages(
             [
-                system_prompt,
+                (
+                    "system",
+                    SYSTEM_PROMPT,
+                ),
                 few_shot_prompt,
-                human_prompt,
+                (
+                    "human",
+                    [
+                        CONTENT_AWARE_CONSTRAINT,
+                        # {
+                        #     "type": "image_url",
+                        #     "image_url": {
+                        #         "url": "data:image/png;base64,{content_image}",
+                        #     },
+                        # },
+                        # {
+                        #     "type": "image_url",
+                        #     "image_url": {
+                        #         "url": "data:image/png;base64,{saliency_map}",
+                        #     },
+                        # },
+                    ],
+                ),
             ]
         )
+
+        query_content_image = input.query.content_image.copy()
+        query_content_image.thumbnail((256, 256))
+
+        query_saliency_map = input.query.saliency_map.copy()
+        query_saliency_map.thumbnail((256, 256))
 
         final_prompt = prompt.invoke(
             {
@@ -170,7 +230,12 @@ class ContentAwareSerializer(LayoutSerializer):
                 "layout_domain": self.layout_domain,
                 "content_constraint": self._get_content_constraint(input.query),
                 "type_constraint": self._get_type_constraint(input.query),
+                # "content_image": pil_to_base64(query_content_image),
+                # "saliency_map": pil_to_base64(query_saliency_map),
             }
         )
+
+        # breakpoint()
+
         assert isinstance(final_prompt, ChatPromptValue)
         return final_prompt

@@ -60,6 +60,9 @@ class DiscretizeBboxes(BaseModel, Runnable):
             copy.deepcopy(input.content_bboxes) if input.is_content_aware() else None
         )
         encoded_image = input.encoded_image if isinstance(input, LayoutData) else None
+        encoded_saliency_map = (
+            input.encoded_saliency_map if isinstance(input, LayoutData) else None
+        )
 
         gold_bboxes = (
             copy.deepcopy(input.bboxes)
@@ -92,6 +95,7 @@ class DiscretizeBboxes(BaseModel, Runnable):
             labels=labels,
             gold_bboxes=gold_bboxes,
             encoded_image=encoded_image,
+            encoded_saliency_map=encoded_saliency_map,
             content_bboxes=content_bboxes,
             discrete_bboxes=discrete_bboxes,
             discrete_gold_bboxes=discrete_gold_bboxes,
