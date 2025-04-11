@@ -1,27 +1,25 @@
 import random
+from typing import List, cast
 
 import datasets as ds
 import pytest
 from langchain.chat_models import init_chat_model
+from tqdm.auto import tqdm
 
 from layout_prompter import LayoutPrompter
-from layout_prompter.models import ProcessedLayoutData
-from layout_prompter.modules.rankers import LayoutPrompterRanker
-from layout_prompter.modules.selectors import ContentAwareSelector
-from layout_prompter.modules.serializers import ContentAwareSerializer
+from layout_prompter.models import LayoutData, ProcessedLayoutData
+from layout_prompter.modules import (
+    ContentAwareSelector,
+    ContentAwareSerializer,
+    LayoutPrompterRanker,
+)
+from layout_prompter.preprocessors import ContentAwareProcessor
 from layout_prompter.settings import PosterLayoutSettings
 from layout_prompter.utils.testing import LayoutPrompterTestCase
 from layout_prompter.visualizers import ContentAwareVisualizer
 
 
 class TestContentAwareGeneration(LayoutPrompterTestCase):
-    @pytest.fixture
-    def dataset(self) -> ds.DatasetDict:
-        dataset_dir = self.FIXTURES_ROOT / "datasets" / "poster-layout" / "processed"
-        dataset = ds.load_from_disk(dataset_dir)
-        assert isinstance(dataset, ds.DatasetDict)
-        return dataset
-
     @pytest.fixture
     def num_prompt(self) -> int:
         return 10
@@ -30,17 +28,52 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
     def num_return(self) -> int:
         return 10
 
-    def test_content_aware_generation(self, dataset: ds.DatasetDict, num_prompt: int):
+    @pytest.fixture
+    def model_provider(self) -> str:
+        return "openai"
+
+    @pytest.fixture
+    def model_id(self) -> str:
+        return "gpt-4o"
+
+    def test_content_aware_generation(
+        self,
+        hf_dataset: ds.DatasetDict,
+        num_prompt: int,
+        num_return: int,
+        model_provider: str,
+        model_id: str,
+    ):
+        # Load the PosterLayout settings
         settings = PosterLayoutSettings()
 
-        examples = [ProcessedLayoutData(**example) for example in dataset["train"]]
+        # Convert HF dataset format to LayoutData format
+        dataset = {
+            split: [
+                LayoutData.model_validate(data)
+                for data in tqdm(hf_dataset[split], desc=f"Processing for {split}")
+            ]
+            for split in hf_dataset
+        }
 
-        # idx = random.choice(range(len(dataset["test"])))
-        idx = 309
+        # Define the content-aware processor and process the data for candidates
+        processor = ContentAwareProcessor()
+        examples = cast(
+            List[ProcessedLayoutData], processor.invoke(input=dataset["train"])
+        )
+
+        # Select a random test example
+        idx = random.choice(range(len(dataset["test"])))
+        idx = 443
         print(f"{idx=}")
+        test_data = dataset["test"][idx]
 
-        test_data = ProcessedLayoutData(**dataset["test"][idx])
+        # Process the test data
+        processed_test_data = cast(
+            ProcessedLayoutData, processor.invoke(input=test_data)
+        )
 
+        # Define the LayoutPrompter
         layout_prompter = LayoutPrompter(
             selector=ContentAwareSelector(
                 num_prompt=num_prompt,
@@ -51,13 +84,21 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
                 layout_domain=settings.domain,
             ),
             llm=init_chat_model(
-                model_provider="openai",
-                model="gpt-4o",
+                model_provider=model_provider,
+                model=model_id,
             ),
             ranker=LayoutPrompterRanker(),
         )
-        outputs = layout_prompter.invoke(input=test_data)
 
+        # Invoke the LayoutPrompter
+        layout_prompter_config = {
+            "num_return": num_return,
+        }
+        outputs = layout_prompter.invoke(
+            input=processed_test_data, config={"configurable": layout_prompter_config}
+        )
+
+        # Define the visualizer
         visualizer = ContentAwareVisualizer(
             canvas_size=settings.canvas_size, labels=settings.labels
         )
@@ -67,9 +108,11 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
             "content_bboxes": test_data.discrete_content_bboxes,
         }
 
+        # Create the save directory
         save_dir = self.PROJECT_ROOT / "generated" / "content_aware"
         save_dir.mkdir(parents=True, exist_ok=True)
 
+        # Save the generated layout-rendering images
         for i, output in enumerate(outputs):
             image = visualizer.invoke(
                 output,
