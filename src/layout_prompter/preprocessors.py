@@ -1,6 +1,6 @@
 import random
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional
 
 import datasets as ds
 import numpy as np
@@ -10,7 +10,7 @@ from langchain_core.runnables.config import RunnableConfig
 from pydantic import BaseModel
 from tqdm.auto import tqdm
 
-from layout_prompter.models import LayoutData, ProcessedLayoutData
+from layout_prompter.models import LayoutData
 from layout_prompter.settings import CanvasSize
 from layout_prompter.transforms import (
     DiscretizeBboxes,
@@ -18,84 +18,149 @@ from layout_prompter.transforms import (
     LexicographicSort,
     SaliencyMapToBboxes,
 )
-from layout_prompter.utils import Configuration, normalize_bboxes, pil_to_base64
-
-
-class ProcessorConfig(Configuration):
-    """Base Configuration for Processor."""
+from layout_prompter.utils import normalize_bboxes, pil_to_base64
 
 
 class Processor(BaseModel, Runnable):
-    """Base class for all processors."""
-
-
-class ContentAwareProcessorConfig(ProcessorConfig):
-    """Configuration for ContentAwareProcessor."""
+    canvas_size: CanvasSize
 
 
 class ContentAwareProcessor(Processor):
     name: str = "content-aware-processor"
 
+    filter_threshold: int = 100
     max_element_numbers: int = 10
 
     # Store the possible labels from the training data.
     # During testing, randomly sample from this group for generation.
     _possible_labels: List[pnd.NpNDArray] = []
 
-    def _process(self, layout_data: LayoutData) -> ProcessedLayoutData:
-        bboxes, labels = layout_data.bboxes, layout_data.labels
-        is_train = bboxes is not None and labels is not None
+    @property
+    def saliency_map_to_bboxes(self) -> SaliencyMapToBboxes:
+        return SaliencyMapToBboxes(threshold=self.filter_threshold)
 
-        if is_train:
-            assert labels is not None
-            if len(labels) <= self.max_element_numbers:
-                # Store the labels for generating the prompt
-                self._possible_labels.append(labels)
-        else:
-            assert len(self._possible_labels) > 0, (
-                "Please process the training data first."
-            )
-            # In the test data, bboxes and labels do not exist.
-            # The labels are randomly sampled from the `possible_labels` obtained from the train data.
-            # The bboxes are set below the sampled labels.
-            labels = random.choice(self._possible_labels)
-            bboxes = np.zeros((len(labels), 4))
+    def _process_train_data(
+        self,
+        encoded_image: str,
+        anns: Dict[str, Any],
+        map_w: int,
+        map_h: int,
+        content_bboxes: np.ndarray,
+    ) -> LayoutData:
+        bboxes = np.array(anns["box_elem"])
+        labels = np.array(anns["cls_elem"])
 
-            layout_data = layout_data.model_copy(
-                update={"bboxes": bboxes, "labels": labels}
+        # Convert bboxes to [x, y, w, h] format
+        bboxes[:, 2] -= bboxes[:, 0]
+        bboxes[:, 3] -= bboxes[:, 1]
+
+        # Normalize bboxes
+        bboxes = normalize_bboxes(bboxes=bboxes, w=map_w, h=map_h)
+
+        if len(labels) <= self.max_element_numbers:
+            # Store the labels for generating the prompt
+            self._possible_labels.append(labels)
+
+        return LayoutData(
+            bboxes=bboxes,
+            labels=labels,
+            content_bboxes=content_bboxes,
+            encoded_image=encoded_image,
+            canvas_size=self.canvas_size,
+        )
+
+    def _process_test_data(
+        self,
+        encoded_image: str,
+        content_bboxes: np.ndarray,
+    ) -> LayoutData:
+        if len(self._possible_labels) == 0:
+            raise RuntimeError("Please process the training data first.")
+
+        # Randomly sample from the possible labels
+        labels = np.array(random.choice(self._possible_labels))
+
+        # Create empty bboxes for the test data
+        bboxes = np.zeros((len(labels), 4))
+
+        return LayoutData(
+            bboxes=bboxes,
+            labels=labels,
+            content_bboxes=content_bboxes,
+            encoded_image=encoded_image,
+            canvas_size=self.canvas_size,
+        )
+
+    def _process(self, example) -> Optional[Dict[str, Any]]:
+        saliency_map = example["saliency_map"]
+        map_w, map_h = saliency_map.size
+
+        content_bboxes = self.saliency_map_to_bboxes.invoke(saliency_map)
+        if content_bboxes is None:
+            # If the saliency map cannot recognize the bbox, exclude it as invalid example
+            return None
+
+        content_bboxes = normalize_bboxes(bboxes=content_bboxes, w=map_w, h=map_h)
+
+        # Convert the content image to base64 string
+        content_image = example["content_image"]
+        encoded_image = pil_to_base64(content_image)
+
+        anns = example["annotations"]
+        is_train = anns is not None
+
+        # Process the training or test data
+        layout_data = (
+            self._process_train_data(
+                anns=anns,
+                map_w=map_w,
+                map_h=map_h,
+                encoded_image=encoded_image,
+                content_bboxes=content_bboxes,
             )
+            if is_train
+            else self._process_test_data(
+                encoded_image=encoded_image,
+                content_bboxes=content_bboxes,
+            )
+        )
 
         # Define the chain of preprocess transformations
-        chain = LexicographicSort() | LabelDictSort() | DiscretizeBboxes()
-
-        # Execute the transformations
-        return chain.invoke(layout_data)
-
-    def _process_list(self, dataset: List[LayoutData]) -> List[LayoutData]:
-        return [self._process(example) for example in dataset]
+        chain = (
+            LexicographicSort()
+            | LabelDictSort()
+            | DiscretizeBboxes(
+                num_x_grid=self.canvas_size.width,
+                num_y_grid=self.canvas_size.height,
+            )
+        )
+        return chain.invoke(layout_data).model_dump()
 
     def invoke(
         self,
-        input: Union[Dict[str, List[LayoutData]], List[LayoutData], LayoutData],
+        input: ds.DatasetDict,
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
-    ) -> Union[Dict[str, List[LayoutData]], List[LayoutData], LayoutData]:
-        if isinstance(input, dict):
-            return {
-                split: cast(
-                    List[LayoutData],
-                    self._process_list(dataset),
-                )
-                for split, dataset in input.items()
-            }
-        elif isinstance(input, list):
-            return self._process_list(input)
+    ) -> ds.DatasetDict:
+        processed_dataset = defaultdict(lambda: defaultdict(list))  # type: ignore[var-annotated]
 
-        elif isinstance(input, LayoutData):
-            return self._process(input)
+        for split in input:
+            # e.g, train_dataset, valid_dataset, test_dataset
+            split_dataset = input[split]
 
-        else:
-            raise ValueError(
-                f"Unsupported input type: {type(input)}. "
-                "Expected Dict[str, List[LayoutData]], List[LayoutData], or LayoutData."
-            )
+            for example in tqdm(split_dataset, desc=f"Processing for {split}"):
+                # Apply preprocessing
+                processed_example = self._process(example)
+
+                if processed_example is None:
+                    # If the saliency map cannot recognize the bbox,
+                    # exclude it as invalid example
+                    continue
+
+                # Store the processed example as columnar data
+                for k, v in processed_example.items():
+                    processed_dataset[split][k].append(v)
+
+        return ds.DatasetDict(
+            {k: ds.Dataset.from_dict(v) for k, v in processed_dataset.items()}
+        )

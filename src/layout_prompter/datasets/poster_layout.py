@@ -1,12 +1,6 @@
 import logging
 
 import datasets as ds
-import numpy as np
-
-from layout_prompter.models import LayoutData
-from layout_prompter.settings import PosterLayoutSettings
-from layout_prompter.transforms import SaliencyMapToBboxes
-from layout_prompter.utils import normalize_bboxes, pil_to_base64
 
 logger = logging.getLogger(__name__)
 
@@ -21,20 +15,26 @@ def _filter_empty_data(example):
         return is_test  # Always return True for test data
 
 
-def _filter_empty_content_bboxes(example):
-    return example["content_bboxes"] is not None
+def _convert_id_to_label(example, id2label):
+    ann = example["annotations"]
+    is_test = ann is None
+
+    if is_test:
+        # There is no annotation in the test set
+        return example
+
+    # Convert label ids to label names
+    cls_elem = [id2label(label_id) for label_id in ann["cls_elem"]]
+    ann["cls_elem"] = cls_elem
+
+    return example
 
 
 def load_poster_layout(
     dataset_name: str = "creative-graphic-design/PKU-PosterLayout",
-    filter_threshold: int = 100,
     num_proc: int = 32,
     return_raw: bool = False,
 ) -> ds.DatasetDict:
-    # Load the PosterLayout settings
-    settings = PosterLayoutSettings()
-
-    # Load the dataset
     dataset = ds.load_dataset(
         dataset_name,
         verification_mode="no_checks",
@@ -57,64 +57,38 @@ def load_poster_layout(
     train_annotation_features = train_features["annotations"].feature
     id2label = train_annotation_features["cls_elem"].int2str
 
-    # Define the saliency map to bboxes transformation
-    saliency_map_to_bboxes = SaliencyMapToBboxes(threshold=filter_threshold)
+    # Convert the cls_elem column, which corresponds to class labels,
+    # from ClassLabel to string
+    train_annotation_features["cls_elem"] = ds.Value("string")
 
-    def convert_to_layout_data_format(example):
-        anns = example["annotations"]
-        is_train = anns is not None
-
-        content_image = example["inpainted_poster"] if is_train else example["canvas"]
-        encoded_image = pil_to_base64(content_image)
-
-        saliency_map = example["pfpn_saliency_map"]
-        map_w, map_h = saliency_map.size
-
-        if is_train:
-            bboxes = np.array(anns["box_elem"])
-            labels = np.array(list(map(id2label, anns["cls_elem"])))
-            assert len(bboxes) == len(labels)
-
-            # Convert bboxes to [x, y, w, h] format
-            bboxes[:, 2] -= bboxes[:, 0]
-            bboxes[:, 3] -= bboxes[:, 1]
-
-            # Normalize bboxes
-            bboxes = normalize_bboxes(bboxes=bboxes, w=map_w, h=map_h)
-        else:
-            bboxes, labels = None, None
-
-        # Get the content bboxes from the saliency map
-        content_bboxes = saliency_map_to_bboxes.invoke(saliency_map)
-
-        if content_bboxes is not None:
-            # Normalize content bboxes
-            content_bboxes = normalize_bboxes(bboxes=content_bboxes, w=map_w, h=map_h)
-
-        # Get the canvas size as a dictionary
-        canvas_size = settings.canvas_size.model_dump()
-
-        data = {
-            "bboxes": bboxes,
-            "labels": labels,
-            "canvas_size": canvas_size,
-            "encoded_image": encoded_image,
-            "content_bboxes": content_bboxes,
-        }
-        assert LayoutData.model_validate(data)
-        return data
-
+    # Apply label conversion to the dataset
     dataset = dataset.map(
-        convert_to_layout_data_format,
-        desc="Convert to LayoutData format",
-        remove_columns=dataset.column_names["train"],
+        _convert_id_to_label,
+        fn_kwargs={"id2label": id2label},
+        features=train_features,  # Override the features to use the updated cls_elem
+        desc="Apply label conversion",
         num_proc=num_proc,
     )
 
-    dataset = dataset.filter(
-        _filter_empty_content_bboxes,
-        desc="Filter out empty content bboxes",
-        num_proc=num_proc,
+    # Rename and remove the columns to match the expected format
+    dataset = dataset.rename_columns(
+        {
+            "inpainted_poster": "content_image",
+            "pfpn_saliency_map": "saliency_map",
+        }
+    )
+    dataset = dataset.remove_columns(
+        [
+            "original_poster",
+            "basnet_saliency_map",
+        ]
+    )
+    # Execute cases that must be processed individually for each split
+    dataset["train"] = dataset["train"].remove_columns("canvas")
+    dataset["test"] = (
+        dataset["test"]
+        .remove_columns("content_image")
+        .rename_columns({"canvas": "content_image"})
     )
 
     logger.debug(dataset)

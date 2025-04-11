@@ -1,17 +1,18 @@
 from functools import cached_property
-from typing import Optional
+from typing import Optional, Union
 
 import pydantic_numpy.typing as pnd
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+from pydantic_numpy import np_array_pydantic_annotated_typing
 
 from layout_prompter.settings import CanvasSize
 from layout_prompter.typehints import PilImage
-from layout_prompter.utils import base64_to_pil
+from layout_prompter.utils import base64_to_pil, pil_to_base64
 
 
 class LayoutData(BaseModel):
-    bboxes: Optional[pnd.Np2DArray]
-    labels: Optional[pnd.NpNDArray]
+    bboxes: pnd.Np2DArray
+    labels: pnd.NpNDArray
     canvas_size: CanvasSize
 
     encoded_image: Optional[str]
