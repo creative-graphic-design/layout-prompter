@@ -1,4 +1,5 @@
-from typing import Any, List, Optional, Tuple
+from abc import abstractmethod
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 import pydantic_numpy.typing as pnd
@@ -7,7 +8,12 @@ from langchain_core.runnables.config import RunnableConfig
 from PIL import Image, ImageDraw
 from pydantic import BaseModel
 
-from layout_prompter.models import SerializedData, SerializedOutputData
+from layout_prompter.models import (
+    Coordinates,
+    ProcessedLayoutData,
+    SerializedData,
+    SerializedOutputData,
+)
 from layout_prompter.settings import CanvasSize
 from layout_prompter.typehints import PilImage
 from layout_prompter.utils import Configuration, generate_color_palette
@@ -34,6 +40,27 @@ class ContentAwareVisualizerConfig(VisualizerConfig):
 class Visualizer(BaseModel, Runnable):
     canvas_size: CanvasSize
     labels: List[str]
+
+    def _convert_to_serialized_output_data(
+        self, processed_data: ProcessedLayoutData
+    ) -> SerializedOutputData:
+        assert (
+            processed_data.labels is not None
+            and processed_data.discrete_bboxes is not None
+        )
+        return SerializedOutputData(
+            layouts=[
+                SerializedData(
+                    class_name=class_name,
+                    coord=Coordinates(
+                        left=bbox[0], top=bbox[1], width=bbox[2], height=bbox[3]
+                    ),
+                )
+                for class_name, bbox in zip(
+                    processed_data.labels, processed_data.discrete_bboxes
+                )
+            ]
+        )
 
     def get_sorted_layouts(self, layouts: List[SerializedData]) -> List[SerializedData]:
         """Sort layouts by area in descending order."""
@@ -85,18 +112,31 @@ class Visualizer(BaseModel, Runnable):
 
         return image
 
+    @abstractmethod
+    def invoke(
+        self,
+        input: Union[ProcessedLayoutData, SerializedOutputData],
+        config: Optional[RunnableConfig] = None,
+        **kwargs: Any,
+    ) -> Any:
+        raise NotImplementedError
+
 
 class ContentAgnosticVisualizer(Visualizer):
     name: str = "content-agnostic-visualizer"
 
     def invoke(
         self,
-        input: SerializedOutputData,
+        input: Union[ProcessedLayoutData, SerializedOutputData],
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
     ) -> PilImage:
         # Load the runtime configuration
         conf = ContentAgnosticVisualizerConfig.from_runnable_config(config)
+
+        # Convert the input to SerializedOutputData if needed
+        if isinstance(input, ProcessedLayoutData):
+            input = self._convert_to_serialized_output_data(input)
 
         # Resize the canvas based on the configuration
         canvas_w = int(self.canvas_size.width * conf.resize_ratio)
@@ -158,12 +198,16 @@ class ContentAwareVisualizer(Visualizer):
 
     def invoke(
         self,
-        input: SerializedOutputData,
+        input: Union[ProcessedLayoutData, SerializedOutputData],
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
     ) -> PilImage:
         # Load the runtime configuration
         conf = ContentAwareVisualizerConfig.from_runnable_config(config)
+
+        # Convert the input to SerializedOutputData if needed
+        if isinstance(input, ProcessedLayoutData):
+            input = self._convert_to_serialized_output_data(input)
 
         # Resize the canvas based on the configuration
         canvas_w = int(self.canvas_size.width * conf.resize_ratio)
