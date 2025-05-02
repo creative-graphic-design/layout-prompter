@@ -3,7 +3,6 @@ from typing import Any, List, Optional, Tuple, Union
 import cv2
 import numpy as np
 from langchain_core.runnables import Runnable
-from PIL import Image
 from pydantic import BaseModel
 
 from layout_prompter.typehints import PilImage
@@ -51,6 +50,6 @@ class SaliencyMapToBboxes(BaseModel, Runnable):
         contours, _ = cv2.findContours(
             thresholded_map, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
         )
-        bboxes = self.get_filtered_bboxes(contours)
+        bboxes = self.get_filtered_bboxes(contours)  # type: ignore[arg-type]
 
         return bboxes if len(bboxes) != 0 else None
