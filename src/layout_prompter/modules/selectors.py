@@ -1,13 +1,10 @@
 import random
-from abc import abstractmethod
 from typing import Any, List, Optional, Tuple
 
 import cv2
 import numpy as np
 from langchain_core.example_selectors.base import BaseExampleSelector
-from langchain_core.runnables import Runnable
-from langchain_core.runnables.config import RunnableConfig
-from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, model_validator
 from typing_extensions import Self
 
 from layout_prompter.models import ProcessedLayoutData
