@@ -43,6 +43,8 @@ class DiscretizeBboxes(BaseModel, Runnable):
         config: RunnableConfig | None = None,
         **kwargs: Any,
     ) -> ProcessedLayoutData:
+        assert input.bboxes is not None and input.labels is not None
+
         canvas_size = input.canvas_size.model_dump()
 
         bboxes, labels = copy.deepcopy(input.bboxes), copy.deepcopy(input.labels)

@@ -1,13 +1,10 @@
 import random
-from abc import abstractmethod
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
 from langchain_core.example_selectors.base import BaseExampleSelector
-from langchain_core.runnables import Runnable
-from langchain_core.runnables.config import RunnableConfig
-from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, model_validator
 from typing_extensions import Self
 
 from layout_prompter.models import ProcessedLayoutData
@@ -36,7 +33,10 @@ class LayoutSelector(BaseExampleSelector, BaseModel):
     ) -> List[ProcessedLayoutData]:
         raise NotImplementedError
 
-    def add_example(self, example: ProcessedLayoutData) -> Any:
+    def add_example(  # type: ignore[override]
+        self,
+        example: ProcessedLayoutData,
+    ) -> None:
         self.examples.append(example)
 
     def _is_filter(self, data: ProcessedLayoutData) -> bool:

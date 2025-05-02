@@ -21,8 +21,7 @@ class LayoutRanker(Runnable):
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
     ) -> List[SerializedOutputData]:
-        breakpoint()
-        return super().invoke(input, config, **kwargs)
+        raise NotImplementedError
 
 
 class LayoutPrompterRanker(BaseModel, LayoutRanker):
@@ -62,6 +61,7 @@ class LayoutPrompterRanker(BaseModel, LayoutRanker):
 
         min_vals = np.min(metrics_arr, axis=0, keepdims=True)
         max_vals = np.max(metrics_arr, axis=0, keepdims=True)
+
         scaled_metrics = (metrics_arr - min_vals) / (max_vals - min_vals)
 
         quality = (
