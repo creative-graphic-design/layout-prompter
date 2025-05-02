@@ -1,5 +1,5 @@
 import random
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
