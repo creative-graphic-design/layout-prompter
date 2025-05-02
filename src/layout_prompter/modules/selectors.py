@@ -33,7 +33,10 @@ class LayoutSelector(BaseExampleSelector, BaseModel):
     ) -> List[ProcessedLayoutData]:
         raise NotImplementedError
 
-    def add_example(self, example: ProcessedLayoutData) -> Any:
+    def add_example(  # type: ignore[override]
+        self,
+        example: ProcessedLayoutData,
+    ) -> None:
         self.examples.append(example)
 
     def _is_filter(self, data: ProcessedLayoutData) -> bool:

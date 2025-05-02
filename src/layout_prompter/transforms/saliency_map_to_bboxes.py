@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
 import cv2
 import numpy as np
@@ -50,6 +50,6 @@ class SaliencyMapToBboxes(BaseModel, Runnable):
         contours, _ = cv2.findContours(
             thresholded_map, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
         )
-        bboxes = self.get_filtered_bboxes(contours)
+        bboxes = self.get_filtered_bboxes(contours)  # type: ignore[arg-type]
 
         return bboxes if len(bboxes) != 0 else None

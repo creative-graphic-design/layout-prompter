@@ -16,6 +16,8 @@ class LexicographicSort(Runnable):
         config: RunnableConfig | None = None,
         **kwargs: Any,
     ) -> ProcessedLayoutData:
+        assert input.bboxes is not None and input.labels is not None
+
         canvas_size = input.canvas_size
         bboxes, labels = copy.deepcopy(input.bboxes), copy.deepcopy(input.labels)
         content_bboxes = (
@@ -40,6 +42,7 @@ class LexicographicSort(Runnable):
         )
 
         # Extract left and top coordinates from bboxes
+        assert input.bboxes is not None
         left, top, _, _ = input.bboxes.T
 
         # Get the indices of the sorted bboxes based on left and top coordinates

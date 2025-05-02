@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any, Final, List
 
 from langchain_core.prompt_values import ChatPromptValue
@@ -14,6 +15,8 @@ from pydantic import BaseModel, field_validator
 
 from layout_prompter.models import Coordinates, ProcessedLayoutData, SerializedData
 
+logger = logging.getLogger(__name__)
+
 SYSTEM_PROMPT: Final[str] = """\
 Please generate a layout based on the given information. You need to ensure that the generated layout looks realistic, with elements well aligned and avoiding unnecessary overlap.
 
@@ -25,8 +28,7 @@ Please generate a layout based on the given information. You need to ensure that
 {layout_domain} layout
 
 ## Canvas Size
-{canvas_width}px x {canvas_height}px
-"""
+{canvas_width}px x {canvas_height}px"""
 
 CONTENT_AWARE_CONSTRAINT: Final[str] = """\
 # Constraints
@@ -34,13 +36,11 @@ CONTENT_AWARE_CONSTRAINT: Final[str] = """\
 {content_constraint}
 
 ## Element Type Constraint
-{type_constraint}
-"""
+{type_constraint}"""
 
 SERIALIZED_LAYOUT: Final[str] = """\
 # Serialized Layout
-{serialized_layout}
-"""
+{serialized_layout}"""
 
 
 class LayoutSerializerInput(BaseModel):
@@ -97,16 +97,18 @@ class ContentAwareSerializer(LayoutSerializer):
         return self._convert_to_double_bracket(content_constraint)
 
     def _get_type_constraint(self, data: ProcessedLayoutData) -> str:
+        assert data.labels is not None
         type_constraint = json.dumps(
             {idx: label for idx, label in enumerate(data.labels)}
         )
         return self._convert_to_double_bracket(type_constraint)
 
     def _get_serialized_layout(self, data: ProcessedLayoutData) -> str:
-        assert len(data.labels) == len(data.discrete_gold_bboxes)
+        assert data.labels is not None and data.discrete_bboxes is not None
+        labels, discrete_gold_bboxes = data.labels, data.discrete_bboxes
 
         serialized_data_list = []
-        for class_name, bbox in zip(data.labels, data.discrete_gold_bboxes):
+        for class_name, bbox in zip(labels, discrete_gold_bboxes):
             left, top, width, height = bbox
 
             serialized_data = SerializedData(
@@ -173,4 +175,6 @@ class ContentAwareSerializer(LayoutSerializer):
             }
         )
         assert isinstance(final_prompt, ChatPromptValue)
+        logger.debug(final_prompt.to_messages())
+
         return final_prompt
