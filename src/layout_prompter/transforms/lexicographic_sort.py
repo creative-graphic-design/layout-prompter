@@ -55,6 +55,7 @@ class LexicographicSort(Runnable):
 
         # Return the processed layout data
         return ProcessedLayoutData(
+            idx=input.idx,
             bboxes=bboxes,
             labels=labels,
             encoded_image=encoded_image,

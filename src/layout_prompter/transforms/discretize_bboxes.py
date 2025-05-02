@@ -82,6 +82,7 @@ class DiscretizeBboxes(BaseModel, Runnable):
         )
 
         return ProcessedLayoutData(
+            idx=input.idx,
             bboxes=bboxes,
             labels=labels,
             gold_bboxes=gold_bboxes,

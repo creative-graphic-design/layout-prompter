@@ -10,6 +10,7 @@ from layout_prompter.utils import base64_to_pil
 
 
 class LayoutData(BaseModel):
+    idx: Optional[int] = None
     bboxes: Optional[pnd.Np2DArray]
     labels: Optional[pnd.NpNDArray]
     canvas_size: CanvasSize

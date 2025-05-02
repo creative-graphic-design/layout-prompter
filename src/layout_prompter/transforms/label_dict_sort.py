@@ -52,6 +52,7 @@ class LabelDictSort(Runnable):
         gold_bboxes = gold_bboxes[sorted_indices]
 
         return ProcessedLayoutData(
+            idx=input.idx,
             bboxes=bboxes,
             labels=labels,
             encoded_image=encoded_image,
