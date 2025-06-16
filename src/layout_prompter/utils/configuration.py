@@ -17,6 +17,6 @@ class Configuration(BaseModel):
         )
         values: Dict[str, Any] = {
             f: os.environ.get(f.upper(), configurable.get(f))
-            for f in cls.model_fields.keys()
+            for f in cls.__pydantic_fields__.keys()
         }
         return cls(**{k: v for k, v in values.items() if v is not None})
