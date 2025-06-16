@@ -214,7 +214,9 @@ class ContentAwareVisualizer(Visualizer):
         canvas_h = int(self.canvas_size.height * conf.resize_ratio)
 
         # Prepare canvas image for drawing
-        image = conf.bg_image
+        # Note here that copy the background image
+        # to avoid race conditions in batch processing
+        image = conf.bg_image.copy()
         image = image.convert("RGB")
         image = image.resize((canvas_w, canvas_h), Image.Resampling.BILINEAR)
 
