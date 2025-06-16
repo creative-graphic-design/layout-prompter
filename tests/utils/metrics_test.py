@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-import torch
 
 from layout_prompter.utils import (
     compute_alignment,
@@ -37,36 +36,6 @@ def labels() -> np.ndarray:
             "underlay",
         ]
     )
-
-
-def torch_compute_overlap(bbox, mask):
-    # Attribute-conditioned Layout GAN
-    # 3.6.3 Overlapping Loss
-
-    bbox = bbox.masked_fill(~mask.unsqueeze(-1), 0)
-    bbox = bbox.permute(2, 0, 1)
-
-    l1, t1, r1, b1 = bbox.unsqueeze(-1)
-    l2, t2, r2, b2 = bbox.unsqueeze(-2)
-    a1 = (r1 - l1) * (b1 - t1)
-
-    # intersection
-    l_max = torch.maximum(l1, l2)
-    r_min = torch.minimum(r1, r2)
-    t_max = torch.maximum(t1, t2)
-    b_min = torch.minimum(b1, b2)
-    cond = (l_max < r_min) & (t_max < b_min)
-    ai = torch.where(cond, (r_min - l_max) * (b_min - t_max), torch.zeros_like(a1[0]))
-
-    diag_mask = torch.eye(a1.size(1), dtype=torch.bool, device=a1.device)
-    ai = ai.masked_fill(diag_mask, 0)
-
-    ar = ai / a1
-    ar = torch.from_numpy(np.nan_to_num(ar.numpy()))
-    score = torch.from_numpy(
-        np.nan_to_num((ar.sum(dim=(1, 2)) / mask.float().sum(-1)).numpy())
-    )
-    return (score).mean().item()
 
 
 def test_compute_alignment(bboxes: np.ndarray, labels: np.ndarray):
