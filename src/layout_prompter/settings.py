@@ -1,5 +1,4 @@
 import pathlib
-from typing import List
 
 from pydantic import BaseModel
 from pydantic_settings import (
@@ -19,7 +18,6 @@ class TaskSettings(BaseSettings):
     name: str
     domain: str
     canvas_size: CanvasSize
-    labels: List[str]
 
     @classmethod
     def settings_customise_sources(
