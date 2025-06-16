@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Protocol
 
 import numpy as np
 from langchain_core.runnables import Runnable
@@ -6,7 +6,6 @@ from langchain_core.runnables.config import RunnableConfig
 from pydantic import BaseModel, model_validator
 from typing_extensions import Self
 
-from layout_prompter.models import SerializedOutputData
 from layout_prompter.utils import (
     compute_alignment,
     compute_overlap,
@@ -14,13 +13,21 @@ from layout_prompter.utils import (
 )
 
 
+class LayoutSerializable(Protocol):
+    """Protocol for objects that have serialized layout data."""
+
+    layouts: List[Any]
+
+
 class LayoutRanker(Runnable):
+    """Base class for layout ranking algorithms."""
+
     def invoke(
         self,
-        input: List[SerializedOutputData],
+        input: List[LayoutSerializable],
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
-    ) -> List[SerializedOutputData]:
+    ) -> List[LayoutSerializable]:
         raise NotImplementedError
 
 
@@ -38,10 +45,10 @@ class LayoutPrompterRanker(BaseModel, LayoutRanker):
 
     def invoke(
         self,
-        input: List[SerializedOutputData],
+        input: List[LayoutSerializable],
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
-    ) -> List[SerializedOutputData]:
+    ) -> List[LayoutSerializable]:
         metrics = []
         for data in input:
             bboxes = np.array([layout.coord.to_tuple() for layout in data.layouts])
