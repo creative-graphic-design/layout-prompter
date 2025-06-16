@@ -1,11 +1,18 @@
 from dataclasses import dataclass
-from typing import Any, List, Optional, cast
+from typing import (
+    Any,
+    List,
+    Optional,
+    Type,
+    cast,
+)
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
+from pydantic import BaseModel
 
-from layout_prompter.models import ProcessedLayoutData, SerializedOutputData
+from layout_prompter.models import ProcessedLayoutData
 from layout_prompter.modules.rankers import LayoutRanker
 from layout_prompter.modules.selectors import LayoutSelector
 from layout_prompter.modules.serializers import LayoutSerializer, LayoutSerializerInput
@@ -24,6 +31,7 @@ class LayoutPrompter(Runnable):
     serializer: LayoutSerializer
     llm: BaseChatModel
     ranker: LayoutRanker
+    schema: Type[BaseModel]
 
     def invoke(
         self,
@@ -42,9 +50,9 @@ class LayoutPrompter(Runnable):
         messages = self.serializer.invoke(input=serializer_input)
 
         # Generate batched layouts
-        structured_llm = self.llm.with_structured_output(SerializedOutputData)
+        structured_llm = self.llm.with_structured_output(self.schema)
         outputs = cast(
-            List[SerializedOutputData],
+            List[BaseModel],
             structured_llm.batch([messages] * conf.num_return),
         )
 
