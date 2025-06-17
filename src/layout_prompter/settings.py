@@ -1,4 +1,5 @@
 import pathlib
+from typing import List, get_args
 
 from pydantic import BaseModel
 from pydantic_settings import (
@@ -7,6 +8,8 @@ from pydantic_settings import (
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
+
+from layout_prompter.models.serialized_data import PosterClassNames
 
 
 class CanvasSize(BaseModel):
@@ -18,6 +21,7 @@ class TaskSettings(BaseSettings):
     name: str
     domain: str
     canvas_size: CanvasSize
+    labels: List[str]
 
     @classmethod
     def settings_customise_sources(
@@ -27,6 +31,8 @@ class TaskSettings(BaseSettings):
 
 
 class PosterLayoutSettings(TaskSettings):
+    labels: List[str] = list(get_args(PosterClassNames))
+
     model_config = SettingsConfigDict(
         yaml_file=pathlib.Path(__file__).resolve().parents[2]
         / "settings"
