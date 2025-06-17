@@ -1,4 +1,4 @@
-from typing import List, Literal, Tuple, Union
+from typing import Any, List, Literal, Protocol, Tuple, Union
 
 from pydantic import BaseModel
 
@@ -46,6 +46,12 @@ Rico25ClassNames = Literal[
     "number-stepper",
     "date-picker",
 ]
+
+
+class LayoutSerializable(Protocol):
+    """Protocol for objects that have serialized layout data."""
+
+    layouts: List[Any]
 
 
 # 汎用ベースクラス（後方互換性のため）
