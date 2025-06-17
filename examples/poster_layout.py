@@ -94,7 +94,7 @@ def main(args: argparse.Namespace) -> None:
     outputs = layout_prompter.invoke(input=inference_example)
 
     visualizer = ContentAwareVisualizer(
-        canvas_size=settings.canvas_size, labels=["text", "logo", "underlay"]
+        canvas_size=settings.canvas_size, labels=settings.labels
     )
     visualizer_config = {
         "resize_ratio": 2.0,
