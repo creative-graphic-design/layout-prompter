@@ -1,18 +1,20 @@
 from .layout_data import LayoutData, ProcessedLayoutData
 from .serialized_data import (
     Coordinates,
-    SerializedData,
-    SerializedOutputData,
+    LayoutSerializable,
     PosterLayoutSerializedData,
     PosterLayoutSerializedOutputData,
     Rico25SerializedData,
     Rico25SerializedOutputData,
+    SerializedData,
+    SerializedOutputData,
 )
 
 __all__ = [
     "LayoutData",
     "ProcessedLayoutData",
     "Coordinates",
+    "LayoutSerializable",
     #
     # Base classes
     #
