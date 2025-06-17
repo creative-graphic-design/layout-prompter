@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Protocol
+from typing import Any, List, Optional
 
 import numpy as np
 from langchain_core.runnables import Runnable
@@ -6,17 +6,12 @@ from langchain_core.runnables.config import RunnableConfig
 from pydantic import BaseModel, model_validator
 from typing_extensions import Self
 
+from layout_prompter.models import LayoutSerializable
 from layout_prompter.utils import (
     compute_alignment,
     compute_overlap,
     convert_ltwh_to_ltrb,
 )
-
-
-class LayoutSerializable(Protocol):
-    """Protocol for objects that have serialized layout data."""
-
-    layouts: List[Any]
 
 
 class LayoutRanker(Runnable):
