@@ -1,20 +1,25 @@
 import random
-from typing import List, cast
+from typing import List, Type, cast
 
 import datasets as ds
 import pytest
 from langchain.chat_models import init_chat_model
+from pydantic import BaseModel
 from tqdm.auto import tqdm
 
 from layout_prompter import LayoutPrompter
-from layout_prompter.models import LayoutData, ProcessedLayoutData
+from layout_prompter.models import (
+    LayoutData,
+    PosterLayoutSerializedOutputData,
+    ProcessedLayoutData,
+)
 from layout_prompter.modules import (
     ContentAwareSelector,
     ContentAwareSerializer,
     LayoutPrompterRanker,
 )
 from layout_prompter.preprocessors import ContentAwareProcessor
-from layout_prompter.settings import PosterLayoutSettings
+from layout_prompter.settings import PosterLayoutSettings, TaskSettings
 from layout_prompter.utils.testing import LayoutPrompterTestCase
 from layout_prompter.visualizers import ContentAwareVisualizer
 
@@ -36,6 +41,10 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
     def model_id(self) -> str:
         return "gpt-4o"
 
+    @pytest.mark.parametrize(
+        argnames=("settings", "output_schema"),
+        argvalues=((PosterLayoutSettings(), PosterLayoutSerializedOutputData),),
+    )
     def test_content_aware_generation(
         self,
         hf_dataset: ds.DatasetDict,
@@ -43,10 +52,9 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
         num_return: int,
         model_provider: str,
         model_id: str,
+        settings: TaskSettings,
+        output_schema: Type[BaseModel],
     ):
-        # Load the PosterLayout settings
-        settings = PosterLayoutSettings()
-
         # Convert HF dataset format to LayoutData format
         dataset = {
             split: [
@@ -88,6 +96,7 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
                 model=model_id,
             ),
             ranker=LayoutPrompterRanker(),
+            schema=output_schema,
         )
 
         # Invoke the LayoutPrompter
