@@ -1,5 +1,7 @@
 import datasets as ds
+from typing import get_args
 
+from layout_prompter.models.serialized_data import PosterClassNames
 from layout_prompter.settings import PosterLayoutSettings
 
 
@@ -10,7 +12,7 @@ def test_poster_layout_settings(raw_dataset: ds.DatasetDict):
     assert settings.domain == "poster"
     assert settings.canvas_size.width == 102
     assert settings.canvas_size.height == 150
-    assert settings.labels == ["text", "logo", "underlay"]
+    assert settings.labels == list(get_args(PosterClassNames))
 
     # Check if the labels in the settings are the same as in the dataset
     actual_labels = (
