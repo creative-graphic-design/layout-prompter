@@ -67,7 +67,7 @@ class LayoutSelector(BaseExampleSelector, BaseModel):
 
 
 class ContentAwareSelector(LayoutSelector):
-    def _to_binary_image(self, content_bboxes):
+    def _to_binary_image(self, content_bboxes: np.ndarray) -> np.ndarray:
         binary_image = np.zeros(
             (self.canvas_size.height, self.canvas_size.width),
             dtype=np.uint8,
