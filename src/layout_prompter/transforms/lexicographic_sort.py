@@ -3,6 +3,7 @@ from typing import Any, Union
 
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
+from loguru import logger
 
 from layout_prompter.models import LayoutData, ProcessedLayoutData
 
@@ -54,7 +55,7 @@ class LexicographicSort(Runnable):
         gold_bboxes = gold_bboxes[sorted_indices]
 
         # Return the processed layout data
-        return ProcessedLayoutData(
+        processed_data = ProcessedLayoutData(
             idx=input.idx,
             bboxes=bboxes,
             labels=labels,
@@ -68,3 +69,5 @@ class LexicographicSort(Runnable):
             discrete_content_bboxes=None,
             canvas_size=canvas_size,
         )
+        logger.trace(f"{processed_data=}")
+        return processed_data

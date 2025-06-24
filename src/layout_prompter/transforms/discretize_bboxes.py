@@ -4,6 +4,7 @@ from typing import Any, Union
 import numpy as np
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
+from loguru import logger
 from pydantic import BaseModel
 
 from layout_prompter.models import LayoutData, ProcessedLayoutData
@@ -81,7 +82,7 @@ class DiscretizeBboxes(BaseModel, Runnable):
             else None
         )
 
-        return ProcessedLayoutData(
+        processed_data = ProcessedLayoutData(
             idx=input.idx,
             bboxes=bboxes,
             labels=labels,
@@ -95,3 +96,5 @@ class DiscretizeBboxes(BaseModel, Runnable):
             orig_labels=orig_labels,
             canvas_size=canvas_size,
         )
+        logger.trace(f"{processed_data=}")
+        return processed_data

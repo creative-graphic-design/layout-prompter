@@ -3,6 +3,7 @@ from typing import Any, Union
 
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
+from loguru import logger
 
 from layout_prompter.models import LayoutData, ProcessedLayoutData
 
@@ -51,7 +52,7 @@ class LabelDictSort(Runnable):
         labels = labels[sorted_indices]
         gold_bboxes = gold_bboxes[sorted_indices]
 
-        return ProcessedLayoutData(
+        processed_data = ProcessedLayoutData(
             idx=input.idx,
             bboxes=bboxes,
             labels=labels,
@@ -65,3 +66,5 @@ class LabelDictSort(Runnable):
             discrete_content_bboxes=None,
             canvas_size=canvas_size,
         )
+        logger.trace(f"{processed_data=}")
+        return processed_data
