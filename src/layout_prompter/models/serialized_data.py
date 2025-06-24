@@ -48,13 +48,19 @@ Rico25ClassNames = Literal[
 ]
 
 
-class LayoutSerializable(Protocol):
+class LayoutSerializedData(Protocol):
     """Protocol for objects that have serialized layout data."""
 
-    layouts: List[Any]
+    class_name: Any
+    coord: Coordinates
 
 
-# 汎用ベースクラス（後方互換性のため）
+class LayoutSerializedOutputData(Protocol):
+    """Protocol for objects that have serialized layout data."""
+
+    layouts: List[LayoutSerializedData]
+
+
 class SerializedData(BaseModel):
     class_name: Union[str, PosterClassNames, Rico25ClassNames]
     coord: Coordinates
