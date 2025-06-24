@@ -42,11 +42,13 @@ class LayoutPrompter(Runnable):
         # Load configuration
         conf = LayoutPrompterConfiguration.from_runnable_config(config)
 
+        # Get candidates based on the input query
+        candidates = self.selector.select_examples(input)
+
         # Define the input for the serializer based on the input query and selected candidates
-        serializer_input = LayoutSerializerInput(
-            query=input,
-            candidates=self.selector.select_examples(input),
-        )
+        serializer_input = LayoutSerializerInput(query=input, candidates=candidates)
+
+        # Construct the few-shot layout examples as prompt messages
         messages = self.serializer.invoke(input=serializer_input)
 
         # Generate batched layouts
