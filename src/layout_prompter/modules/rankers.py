@@ -6,7 +6,7 @@ from langchain_core.runnables.config import RunnableConfig
 from pydantic import BaseModel, model_validator
 from typing_extensions import Self
 
-from layout_prompter.models import LayoutSerializable
+from layout_prompter.models import LayoutSerializedOutputData
 from layout_prompter.utils import (
     compute_alignment,
     compute_overlap,
@@ -19,10 +19,10 @@ class LayoutRanker(Runnable):
 
     def invoke(
         self,
-        input: List[LayoutSerializable],
+        input: List[LayoutSerializedOutputData],
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
-    ) -> List[LayoutSerializable]:
+    ) -> List[LayoutSerializedOutputData]:
         raise NotImplementedError
 
 
@@ -40,10 +40,10 @@ class LayoutPrompterRanker(BaseModel, LayoutRanker):
 
     def invoke(
         self,
-        input: List[LayoutSerializable],
+        input: List[LayoutSerializedOutputData],
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
-    ) -> List[LayoutSerializable]:
+    ) -> List[LayoutSerializedOutputData]:
         metrics = []
         for data in input:
             bboxes = np.array([layout.coord.to_tuple() for layout in data.layouts])
