@@ -79,7 +79,7 @@ class ContentAwareSelector(LayoutSelector):
                 binary_image,
                 (left, top),
                 (left + width, top + height),
-                255,
+                (255,),
                 thickness=-1,
             )
         return binary_image
@@ -88,9 +88,11 @@ class ContentAwareSelector(LayoutSelector):
         self, query: ProcessedLayoutData, candidate: ProcessedLayoutData
     ) -> float:
         query_content_bboxes = query.discrete_content_bboxes
+        assert query_content_bboxes is not None
         query_binary = self._to_binary_image(query_content_bboxes)
 
         candidate_content_bboxes = candidate.discrete_content_bboxes
+        assert candidate_content_bboxes is not None
         candidate_binary = self._to_binary_image(candidate_content_bboxes)
 
         intersection = cv2.bitwise_and(candidate_binary, query_binary)
