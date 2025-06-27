@@ -6,17 +6,17 @@ from layout_prompter.utils.testing import LayoutPrompterTestCase
 
 
 class TestContentAwareProcessor(LayoutPrompterTestCase):
-    def test_content_aware_processor(self, dataset: ds.DatasetDict):
+    def test_content_aware_processor(self, hf_dataset: ds.DatasetDict):
         settings = PosterLayoutSettings()
 
         processor = ContentAwareProcessor(
             canvas_size=settings.canvas_size,
         )
         processed_dataset = processor.invoke(
-            dataset,
+            hf_dataset,
             config={"configurable": {"num_proc": 32}},
         )
-        assert isinstance(dataset, ds.DatasetDict)
+        assert isinstance(hf_dataset, ds.DatasetDict)
 
         dataset_dir = self.FIXTURES_ROOT / "datasets" / "poster-layout" / "processed"
 
