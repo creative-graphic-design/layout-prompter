@@ -1,7 +1,6 @@
-import numpy as np
-import pytest
 from unittest.mock import Mock
 
+import pytest
 from layout_prompter.models.serialized_data import (
     Coordinates,
     PosterLayoutSerializedData,
@@ -15,16 +14,14 @@ def sample_layouts():
     """Create sample layout data for testing."""
     layouts = [
         PosterLayoutSerializedData(
-            class_name="text",
-            coord=Coordinates(left=10, top=20, width=100, height=30)
+            class_name="text", coord=Coordinates(left=10, top=20, width=100, height=30)
         ),
         PosterLayoutSerializedData(
-            class_name="logo", 
-            coord=Coordinates(left=50, top=60, width=80, height=40)
+            class_name="logo", coord=Coordinates(left=50, top=60, width=80, height=40)
         ),
         PosterLayoutSerializedData(
             class_name="underlay",
-            coord=Coordinates(left=0, top=0, width=200, height=150)
+            coord=Coordinates(left=0, top=0, width=200, height=150),
         ),
     ]
     return layouts
@@ -35,7 +32,9 @@ def sample_serialized_data(sample_layouts):
     """Create sample serialized output data."""
     return [
         PosterLayoutSerializedOutputData(layouts=sample_layouts),
-        PosterLayoutSerializedOutputData(layouts=sample_layouts[:2]),  # Different layout
+        PosterLayoutSerializedOutputData(
+            layouts=sample_layouts[:2]
+        ),  # Different layout
     ]
 
 
@@ -61,7 +60,7 @@ class TestLayoutPrompterRanker:
         assert ranker1.lam_ali == 0.1
         assert ranker1.lam_ove == 0.4
         assert ranker1.lam_iou == 0.5
-        
+
         # Test valid case with lam_iou=0
         ranker2 = LayoutPrompterRanker(lam_ali=0.4, lam_ove=0.6, lam_iou=0.0)
         assert ranker2.lam_ali == 0.4
@@ -86,29 +85,33 @@ class TestLayoutPrompterRanker:
         """Test ranker processes multiple inputs and returns them ranked."""
         ranker = LayoutPrompterRanker()
         result = ranker.invoke(sample_serialized_data)
-        
+
         # Should return same number of items
         assert len(result) == len(sample_serialized_data)
-        
+
         # Should return the same items (though potentially reordered)
-        assert set(id(item) for item in result) == set(id(item) for item in sample_serialized_data)
+        assert set(id(item) for item in result) == set(
+            id(item) for item in sample_serialized_data
+        )
 
     def test_multiple_inputs_with_iou_zero(self, sample_serialized_data):
         """Test ranker processes multiple inputs when lam_iou=0."""
         ranker = LayoutPrompterRanker(lam_ali=0.4, lam_ove=0.6, lam_iou=0.0)
         result = ranker.invoke(sample_serialized_data)
-        
+
         # Should return same number of items
         assert len(result) == len(sample_serialized_data)
-        
+
         # Should return the same items (though potentially reordered)
-        assert set(id(item) for item in result) == set(id(item) for item in sample_serialized_data)
+        assert set(id(item) for item in result) == set(
+            id(item) for item in sample_serialized_data
+        )
 
     def test_invalid_input_no_layouts(self):
         """Test ranker handles input without layouts attribute."""
         ranker = LayoutPrompterRanker()
         invalid_data = Mock(spec=[])  # Mock without layouts attribute
-        
+
         # Should raise AttributeError when trying to access layouts
         with pytest.raises(AttributeError):
             ranker.invoke([invalid_data])
@@ -117,7 +120,7 @@ class TestLayoutPrompterRanker:
         """Test ranker handles input with empty layouts."""
         ranker = LayoutPrompterRanker()
         empty_data = PosterLayoutSerializedOutputData(layouts=[])
-        
+
         # Should raise ValueError when trying to unpack empty bbox array
         with pytest.raises(ValueError):
             ranker.invoke([empty_data])
@@ -125,27 +128,27 @@ class TestLayoutPrompterRanker:
     def test_invalid_layout_attributes(self):
         """Test ranker handles layouts without required attributes."""
         ranker = LayoutPrompterRanker()
-        
+
         # Create mock object that will fail when accessing coord attribute
         class InvalidLayout:
             pass
-        
+
         invalid_data = Mock()
         invalid_data.layouts = [InvalidLayout()]
-        
+
         with pytest.raises(AttributeError):
             ranker.invoke([invalid_data])
 
     def test_normalization_edge_cases(self, sample_layouts):
         """Test normalization handles edge cases like identical metrics."""
         ranker = LayoutPrompterRanker()
-        
+
         # Create identical layouts to test zero-range normalization
         identical_data = [
             PosterLayoutSerializedOutputData(layouts=sample_layouts),
             PosterLayoutSerializedOutputData(layouts=sample_layouts),
         ]
-        
+
         # Should handle division by zero in normalization gracefully
         result = ranker.invoke(identical_data)
         assert len(result) == 2
@@ -154,19 +157,19 @@ class TestLayoutPrompterRanker:
         """Test that ranker returns items in quality order."""
         ranker = LayoutPrompterRanker()
         result = ranker.invoke(sample_serialized_data)
-        
+
         # The exact order depends on the metrics, but we can verify
         # that the function runs without error and returns correct length
         assert len(result) == len(sample_serialized_data)
-        assert all(hasattr(item, 'layouts') for item in result)
+        assert all(hasattr(item, "layouts") for item in result)
 
     def test_mixed_valid_empty_layouts(self, sample_layouts):
         """Test handling of mixed valid and empty layouts."""
         ranker = LayoutPrompterRanker()
-        
+
         valid_data = PosterLayoutSerializedOutputData(layouts=sample_layouts)
         empty_data = PosterLayoutSerializedOutputData(layouts=[])
-        
+
         # Empty layouts will cause ValueError when trying to unpack empty bbox
         with pytest.raises(ValueError):
             ranker.invoke([valid_data, empty_data])
@@ -174,10 +177,10 @@ class TestLayoutPrompterRanker:
     def test_all_empty_layouts(self):
         """Test behavior when all inputs have empty layouts."""
         ranker = LayoutPrompterRanker()
-        
+
         empty_data1 = PosterLayoutSerializedOutputData(layouts=[])
         empty_data2 = PosterLayoutSerializedOutputData(layouts=[])
-        
+
         # All inputs have empty layouts, should raise ValueError
         with pytest.raises(ValueError):
             ranker.invoke([empty_data1, empty_data2])

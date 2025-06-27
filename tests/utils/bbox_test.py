@@ -1,5 +1,4 @@
 import numpy as np
-
 from layout_prompter.utils import convert_ltwh_to_ltrb
 
 

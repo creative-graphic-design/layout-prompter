@@ -1,9 +1,7 @@
 import random
 
-import datasets as ds
 import pytest
 from langchain.chat_models import init_chat_model
-
 from layout_prompter.models import ProcessedLayoutData, SerializedOutputData
 from layout_prompter.modules.selectors import ContentAwareSelector
 from layout_prompter.modules.serializers import (
@@ -13,6 +11,8 @@ from layout_prompter.modules.serializers import (
 from layout_prompter.settings import PosterLayoutSettings
 from layout_prompter.utils.testing import LayoutPrompterTestCase
 from layout_prompter.visualizers import ContentAwareVisualizer, generate_color_palette
+
+import datasets as ds
 
 
 class TestContentAwareVisualizer(LayoutPrompterTestCase):

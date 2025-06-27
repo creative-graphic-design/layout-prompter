@@ -1,7 +1,7 @@
-import datasets as ds
 import numpy as np
-
 from layout_prompter.transforms import SaliencyMapToBboxes
+
+import datasets as ds
 
 
 def test_saliency_map_to_bboxes(raw_dataset: ds.DatasetDict):

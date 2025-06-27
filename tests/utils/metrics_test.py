@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-
 from layout_prompter.utils import (
     compute_alignment,
     compute_overlap,

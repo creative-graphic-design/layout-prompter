@@ -1,10 +1,10 @@
-import datasets as ds
 import pytest
-
 from layout_prompter.models import ProcessedLayoutData
 from layout_prompter.modules.selectors import ContentAwareSelector
 from layout_prompter.settings import PosterLayoutSettings
 from layout_prompter.utils.testing import LayoutPrompterTestCase
+
+import datasets as ds
 
 
 class TestContentAwareCandidateStore(LayoutPrompterTestCase):

@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-
 from layout_prompter.models import LayoutData, ProcessedLayoutData
 from layout_prompter.transforms.label_dict_sort import LabelDictSort
 
@@ -9,19 +8,21 @@ class TestLabelDictSort:
     @pytest.fixture
     def sorter(self) -> LabelDictSort:
         return LabelDictSort()
-    
+
     @pytest.fixture
     def sample_layout_data(self) -> LayoutData:
         return LayoutData(
             idx=0,
-            bboxes=np.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8], [0.9, 0.1, 1.0, 0.2]]),
+            bboxes=np.array(
+                [[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8], [0.9, 0.1, 1.0, 0.2]]
+            ),
             labels=np.array(["text", "button", "logo"]),
             canvas_size={"width": 100, "height": 150},
             encoded_image="base64encoded",
-            content_bboxes=np.array([[0.0, 0.0, 1.0, 1.0]])
+            content_bboxes=np.array([[0.0, 0.0, 1.0, 1.0]]),
         )
-    
-    @pytest.fixture 
+
+    @pytest.fixture
     def sample_processed_data(self) -> ProcessedLayoutData:
         return ProcessedLayoutData(
             idx=1,
@@ -35,38 +36,44 @@ class TestLabelDictSort:
             content_bboxes=np.array([[0.1, 0.2, 0.3, 0.4]]),
             discrete_bboxes=None,
             discrete_gold_bboxes=None,
-            discrete_content_bboxes=None
+            discrete_content_bboxes=None,
         )
 
-    def test_invoke_with_layout_data_sorts_by_label(self, sorter: LabelDictSort, sample_layout_data: LayoutData):
+    def test_invoke_with_layout_data_sorts_by_label(
+        self, sorter: LabelDictSort, sample_layout_data: LayoutData
+    ):
         """Test that labels are sorted alphabetically with corresponding bboxes."""
         result = sorter.invoke(sample_layout_data)
-        
+
         assert isinstance(result, ProcessedLayoutData)
         assert result.idx == sample_layout_data.idx
-        
+
         # Labels should be sorted: ["button", "logo", "text"]
         expected_labels = np.array(["button", "logo", "text"])
         assert np.array_equal(result.labels, expected_labels)
-        
+
         # Bboxes should be reordered to match sorted labels
         # Original order: text[0.1,0.2,0.3,0.4], button[0.5,0.6,0.7,0.8], logo[0.9,0.1,1.0,0.2]
         # New order: button[0.5,0.6,0.7,0.8], logo[0.9,0.1,1.0,0.2], text[0.1,0.2,0.3,0.4]
-        expected_bboxes = np.array([[0.5, 0.6, 0.7, 0.8], [0.9, 0.1, 1.0, 0.2], [0.1, 0.2, 0.3, 0.4]])
+        expected_bboxes = np.array(
+            [[0.5, 0.6, 0.7, 0.8], [0.9, 0.1, 1.0, 0.2], [0.1, 0.2, 0.3, 0.4]]
+        )
         assert np.array_equal(result.bboxes, expected_bboxes)
         assert np.array_equal(result.gold_bboxes, expected_bboxes)
 
-    def test_invoke_with_processed_data_sorts_by_label(self, sorter: LabelDictSort, sample_processed_data: ProcessedLayoutData):
+    def test_invoke_with_processed_data_sorts_by_label(
+        self, sorter: LabelDictSort, sample_processed_data: ProcessedLayoutData
+    ):
         """Test that ProcessedLayoutData is sorted correctly."""
         result = sorter.invoke(sample_processed_data)
-        
+
         assert isinstance(result, ProcessedLayoutData)
         assert result.idx == sample_processed_data.idx
-        
+
         # Labels should be sorted: ["button", "text"]
         expected_labels = np.array(["button", "text"])
         assert np.array_equal(result.labels, expected_labels)
-        
+
         # Bboxes should be reordered: button[0.6,0.7,0.8,0.9], text[0.2,0.3,0.4,0.5]
         expected_bboxes = np.array([[0.6, 0.7, 0.8, 0.9], [0.2, 0.3, 0.4, 0.5]])
         assert np.array_equal(result.bboxes, expected_bboxes)
@@ -80,19 +87,19 @@ class TestLabelDictSort:
             labels=np.array(["zebra", "apple"]),
             canvas_size={"width": 100, "height": 150},
             encoded_image=None,
-            content_bboxes=None
+            content_bboxes=None,
         )
-        
+
         result = sorter.invoke(layout_data)
-        
+
         assert isinstance(result, ProcessedLayoutData)
         assert result.content_bboxes is None
         assert result.encoded_image is None
-        
+
         # Labels should be sorted: ["apple", "zebra"]
         expected_labels = np.array(["apple", "zebra"])
         assert np.array_equal(result.labels, expected_labels)
-        
+
         # Bboxes should be reordered: apple[0.5,0.6,0.7,0.8], zebra[0.1,0.2,0.3,0.4]
         expected_bboxes = np.array([[0.5, 0.6, 0.7, 0.8], [0.1, 0.2, 0.3, 0.4]])
         assert np.array_equal(result.bboxes, expected_bboxes)
@@ -105,11 +112,11 @@ class TestLabelDictSort:
             labels=np.array(["text"]),
             canvas_size={"width": 100, "height": 150},
             encoded_image="base64encoded",
-            content_bboxes=None
+            content_bboxes=None,
         )
-        
+
         result = sorter.invoke(layout_data)
-        
+
         assert isinstance(result, ProcessedLayoutData)
         assert np.array_equal(result.labels, np.array(["text"]))
         assert np.array_equal(result.bboxes, np.array([[0.1, 0.2, 0.3, 0.4]]))
@@ -118,19 +125,23 @@ class TestLabelDictSort:
         """Test sorting with identical labels."""
         layout_data = LayoutData(
             idx=4,
-            bboxes=np.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8], [0.9, 0.1, 1.0, 0.2]]),
+            bboxes=np.array(
+                [[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8], [0.9, 0.1, 1.0, 0.2]]
+            ),
             labels=np.array(["text", "text", "text"]),
             canvas_size={"width": 100, "height": 150},
             encoded_image="base64encoded",
-            content_bboxes=None
+            content_bboxes=None,
         )
-        
+
         result = sorter.invoke(layout_data)
-        
+
         assert isinstance(result, ProcessedLayoutData)
         assert np.array_equal(result.labels, np.array(["text", "text", "text"]))
         # Order should be preserved when labels are identical
-        expected_bboxes = np.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8], [0.9, 0.1, 1.0, 0.2]])
+        expected_bboxes = np.array(
+            [[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8], [0.9, 0.1, 1.0, 0.2]]
+        )
         assert np.array_equal(result.bboxes, expected_bboxes)
 
     def test_invoke_preserves_original_data(self, sorter: LabelDictSort):
@@ -141,11 +152,11 @@ class TestLabelDictSort:
             labels=np.array(["text", "button"]),
             canvas_size={"width": 100, "height": 150},
             encoded_image="base64encoded",
-            content_bboxes=np.array([[0.0, 0.0, 1.0, 1.0]])
+            content_bboxes=np.array([[0.0, 0.0, 1.0, 1.0]]),
         )
-        
+
         result = sorter.invoke(layout_data)
-        
+
         # Original data should match input data
         expected_orig_bboxes = np.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]])
         expected_orig_labels = np.array(["text", "button"])
@@ -160,16 +171,18 @@ class TestLabelDictSort:
             labels=np.array(["text", "button"]),
             canvas_size={"width": 100, "height": 150},
             encoded_image="base64encoded",
-            content_bboxes=np.array([[0.0, 0.0, 1.0, 1.0], [0.2, 0.3, 0.4, 0.5]])
+            content_bboxes=np.array([[0.0, 0.0, 1.0, 1.0], [0.2, 0.3, 0.4, 0.5]]),
         )
-        
+
         result = sorter.invoke(layout_data)
-        
+
         # content_bboxes should be preserved unchanged
         expected_content_bboxes = np.array([[0.0, 0.0, 1.0, 1.0], [0.2, 0.3, 0.4, 0.5]])
         assert np.array_equal(result.content_bboxes, expected_content_bboxes)
 
-    def test_invoke_with_processed_data_resets_discrete_fields(self, sorter: LabelDictSort):
+    def test_invoke_with_processed_data_resets_discrete_fields(
+        self, sorter: LabelDictSort
+    ):
         """Test that discrete fields are reset to None when processing."""
         processed_data = ProcessedLayoutData(
             idx=7,
@@ -183,11 +196,11 @@ class TestLabelDictSort:
             content_bboxes=None,
             discrete_bboxes=np.array([[10, 20, 30, 40]], dtype=np.int32),
             discrete_gold_bboxes=np.array([[10, 20, 30, 40]], dtype=np.int32),
-            discrete_content_bboxes=None
+            discrete_content_bboxes=None,
         )
-        
+
         result = sorter.invoke(processed_data)
-        
+
         # Discrete fields should be reset to None (this is the actual behavior)
         assert result.discrete_bboxes is None
         assert result.discrete_gold_bboxes is None
@@ -205,9 +218,9 @@ class TestLabelDictSort:
             labels=np.array(["text"]),
             canvas_size={"width": 100, "height": 150},
             encoded_image=None,
-            content_bboxes=None
+            content_bboxes=None,
         )
-        
+
         with pytest.raises(AssertionError):
             sorter.invoke(layout_data)
 
@@ -219,8 +232,8 @@ class TestLabelDictSort:
             labels=None,
             canvas_size={"width": 100, "height": 150},
             encoded_image=None,
-            content_bboxes=None
+            content_bboxes=None,
         )
-        
+
         with pytest.raises(AssertionError):
             sorter.invoke(layout_data)
