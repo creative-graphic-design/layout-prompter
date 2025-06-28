@@ -3,8 +3,6 @@ import pathlib
 from typing import List, cast
 
 from langchain.chat_models import init_chat_model
-from tqdm.auto import tqdm
-
 from layout_prompter import LayoutPrompter
 from layout_prompter.datasets import load_poster_layout
 from layout_prompter.models import (
@@ -20,6 +18,7 @@ from layout_prompter.modules import (
 from layout_prompter.preprocessors import ContentAwareProcessor
 from layout_prompter.settings import PosterLayoutSettings
 from layout_prompter.visualizers import ContentAwareVisualizer
+from tqdm.auto import tqdm
 
 
 def parse_args() -> argparse.Namespace:
