@@ -54,6 +54,8 @@ class LayoutSerializedData(Protocol):
     class_name: Any
     coord: Coordinates
 
+    def model_dump(self): ...
+
 
 class LayoutSerializedOutputData(Protocol):
     """Protocol for objects that have serialized layout data."""
@@ -61,26 +63,18 @@ class LayoutSerializedOutputData(Protocol):
     layouts: List[LayoutSerializedData]
 
 
-class SerializedData(BaseModel):
-    class_name: Union[str, PosterClassNames, Rico25ClassNames]
-    coord: Coordinates
-
-
-class SerializedOutputData(BaseModel):
-    layouts: List[SerializedData]
-
-
-# 具体的なレイアウト専用クラス
-class PosterLayoutSerializedData(SerializedData):
+class PosterLayoutSerializedData(BaseModel):
     class_name: PosterClassNames
+    coord: Coordinates
 
 
 class PosterLayoutSerializedOutputData(BaseModel):
     layouts: List[PosterLayoutSerializedData]
 
 
-class Rico25SerializedData(SerializedData):
+class Rico25SerializedData(BaseModel):
     class_name: Rico25ClassNames
+    coord: Coordinates
 
 
 class Rico25SerializedOutputData(BaseModel):

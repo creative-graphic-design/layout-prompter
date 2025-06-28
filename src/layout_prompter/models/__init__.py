@@ -7,21 +7,17 @@ from .serialized_data import (
     PosterLayoutSerializedOutputData,
     Rico25SerializedData,
     Rico25SerializedOutputData,
-    SerializedData,
-    SerializedOutputData,
 )
 
 __all__ = [
     "LayoutData",
     "ProcessedLayoutData",
     "Coordinates",
+    #
+    # Base Protocols
+    #
     "LayoutSerializedData",
     "LayoutSerializedOutputData",
-    #
-    # Base classes
-    #
-    "SerializedData",
-    "SerializedOutputData",
     #
     # Poster Layout
     #

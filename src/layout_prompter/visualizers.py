@@ -1,18 +1,17 @@
 from abc import abstractmethod
-from typing import Any, List, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import Any, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import pydantic_numpy.typing as pnd
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
 from PIL import Image, ImageDraw
-from pydantic import BaseModel
 
 from layout_prompter.models import (
-    Coordinates,
+    LayoutSerializedData,
+    LayoutSerializedOutputData,
     ProcessedLayoutData,
-    SerializedData,
-    SerializedOutputData,
 )
 from layout_prompter.settings import CanvasSize
 from layout_prompter.typehints import PilImage
@@ -37,32 +36,42 @@ class ContentAwareVisualizerConfig(VisualizerConfig):
     content_bboxes: Optional[pnd.NpNDArray] = None
 
 
-class Visualizer(BaseModel, Runnable):
+@dataclass
+class Visualizer(Runnable):
     canvas_size: CanvasSize
     labels: List[str]
+    schema: Optional[Type[LayoutSerializedOutputData]] = None
 
     def _convert_to_serialized_output_data(
         self, processed_data: ProcessedLayoutData
-    ) -> SerializedOutputData:
+    ) -> LayoutSerializedOutputData:
         assert (
             processed_data.labels is not None
             and processed_data.discrete_bboxes is not None
         )
-        return SerializedOutputData(
-            layouts=[
-                SerializedData(
-                    class_name=class_name,
-                    coord=Coordinates(
-                        left=bbox[0], top=bbox[1], width=bbox[2], height=bbox[3]
-                    ),
-                )
+        assert self.schema is not None, "Schema must be defined for serialization."
+
+        serialized_output_data = {
+            "layouts": [
+                {
+                    "class_name": class_name,
+                    "coord": {
+                        "left": bbox[0],
+                        "top": bbox[1],
+                        "width": bbox[2],
+                        "height": bbox[3],
+                    },
+                }
                 for class_name, bbox in zip(
                     processed_data.labels, processed_data.discrete_bboxes
                 )
             ]
-        )
+        }
+        return self.schema(**serialized_output_data)
 
-    def get_sorted_layouts(self, layouts: List[SerializedData]) -> List[SerializedData]:
+    def get_sorted_layouts(
+        self, layouts: List[LayoutSerializedData]
+    ) -> List[LayoutSerializedData]:
         """Sort layouts by area in descending order."""
         # Calculate the area of each layout
         areas = [layout.coord.width * layout.coord.height for layout in layouts]
@@ -76,7 +85,7 @@ class Visualizer(BaseModel, Runnable):
     def draw_layout_bboxes(
         self,
         image: PilImage,
-        layout: SerializedData,
+        layout: LayoutSerializedData,
         resize_ratio: float = 1.0,
         opacity: int = 100,
         font_color: Tuple[int, int, int] = (255, 255, 255),
@@ -115,7 +124,7 @@ class Visualizer(BaseModel, Runnable):
     @abstractmethod
     def invoke(
         self,
-        input: Union[ProcessedLayoutData, SerializedOutputData],
+        input: Union[ProcessedLayoutData, LayoutSerializedOutputData],
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
     ) -> Any:
@@ -127,7 +136,7 @@ class ContentAgnosticVisualizer(Visualizer):
 
     def invoke(
         self,
-        input: Union[ProcessedLayoutData, SerializedOutputData],
+        input: Union[ProcessedLayoutData, LayoutSerializedOutputData],
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
     ) -> PilImage:
@@ -198,7 +207,7 @@ class ContentAwareVisualizer(Visualizer):
 
     def invoke(
         self,
-        input: Union[ProcessedLayoutData, SerializedOutputData],
+        input: Union[ProcessedLayoutData, LayoutSerializedOutputData],
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
     ) -> PilImage:
