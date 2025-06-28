@@ -48,34 +48,38 @@ Rico25ClassNames = Literal[
 ]
 
 
-class LayoutSerializedData(Protocol):
+class LayoutSerializedData(BaseModel):
     """Protocol for objects that have serialized layout data."""
 
     class_name: Any
     coord: Coordinates
 
-    def model_dump(self): ...
 
-
-class LayoutSerializedOutputData(Protocol):
+class LayoutSerializedOutputData(BaseModel):
     """Protocol for objects that have serialized layout data."""
 
-    layouts: List[LayoutSerializedData]
+    layouts: List[Any]
 
 
-class PosterLayoutSerializedData(BaseModel):
+class PosterLayoutSerializedData(LayoutSerializedData):
+    """Serialized data for poster layouts."""
+
     class_name: PosterClassNames
-    coord: Coordinates
 
 
-class PosterLayoutSerializedOutputData(BaseModel):
+class PosterLayoutSerializedOutputData(LayoutSerializedOutputData):
+    """Serialized output data for poster layouts."""
+
     layouts: List[PosterLayoutSerializedData]
 
 
-class Rico25SerializedData(BaseModel):
+class Rico25SerializedData(LayoutSerializedData):
+    """Serialized data for Rico25 layouts."""
+
     class_name: Rico25ClassNames
-    coord: Coordinates
 
 
-class Rico25SerializedOutputData(BaseModel):
+class Rico25SerializedOutputData(LayoutSerializedOutputData):
+    """Serialized output data for Rico25 layouts."""
+
     layouts: List[Rico25SerializedData]
