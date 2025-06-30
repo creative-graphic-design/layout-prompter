@@ -71,7 +71,9 @@ def test_from_runnable_config_with_environment_variables():
     config = MockConfiguration.from_runnable_config(None)
 
     assert config.test_field == "env_value"
-    assert config.another_field == 123  # Pydantic converts string to int for the field type
+    assert (
+        config.another_field == 123
+    )  # Pydantic converts string to int for the field type
     assert config.required_field == "default_value"
 
 
@@ -189,9 +191,7 @@ def test_pydantic_validation_with_wrong_type():
 @patch.dict(os.environ, {}, clear=True)
 def test_from_runnable_config_clean_environment():
     """Test behavior with completely clean environment."""
-    runnable_config: RunnableConfig = {
-        "configurable": {"test_field": "only_config"}
-    }
+    runnable_config: RunnableConfig = {"configurable": {"test_field": "only_config"}}
 
     config = MockConfiguration.from_runnable_config(runnable_config)
 
