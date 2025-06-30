@@ -71,10 +71,13 @@ class LayoutSerializer(Runnable):
     schema: Optional[Type[LayoutSerializedData]] = None
 
     def __post_init__(self) -> None:
-        assert self.task_type is not None, "`task_type` must be set in the subclass"
-        assert self.layout_domain is not None, (
-            "`layout_domain` must be set in the subclass"
+        assert self.task_type is not None, (
+            f"{self.task_type=} must be set in the subclass"
         )
+        assert self.layout_domain is not None, (
+            f"{self.layout_domain=} must be set in the subclass"
+        )
+        assert self.schema is not None, f"{self.schema=} must be set in the subclass"
 
     def _convert_to_double_bracket(self, s: str) -> str:
         """Convert a string to double bracket format.
