@@ -1,25 +1,28 @@
-import datasets as ds
-
+import pytest
+from layout_prompter.models import LayoutData
 from layout_prompter.preprocessors import ContentAwareProcessor
-from layout_prompter.settings import PosterLayoutSettings
 from layout_prompter.utils.testing import LayoutPrompterTestCase
+from tqdm.auto import tqdm
+
+import datasets as ds
 
 
 class TestContentAwareProcessor(LayoutPrompterTestCase):
-    def test_content_aware_processor(self, dataset: ds.DatasetDict):
-        settings = PosterLayoutSettings()
+    @pytest.fixture
+    def num_proc(self) -> int:
+        return 32
 
-        processor = ContentAwareProcessor(
-            canvas_size=settings.canvas_size,
-        )
+    def test_content_aware_processor(self, hf_dataset: ds.DatasetDict, num_proc: int):
+        dataset = {
+            split: [
+                LayoutData.model_validate(data)
+                for data in tqdm(hf_dataset[split], desc=f"Processing for {split}")
+            ]
+            for split in hf_dataset
+        }
+        processor = ContentAwareProcessor()
         processed_dataset = processor.invoke(
             dataset,
-            config={"configurable": {"num_proc": 32}},
+            config={"configurable": {"num_proc": num_proc}},
         )
-        assert isinstance(dataset, ds.DatasetDict)
-
-        dataset_dir = self.FIXTURES_ROOT / "datasets" / "poster-layout" / "processed"
-
-        if not dataset_dir.exists():
-            dataset_dir.mkdir(parents=True, exist_ok=True)
-            processed_dataset.save_to_disk(dataset_dir)
+        assert isinstance(processed_dataset, dict)

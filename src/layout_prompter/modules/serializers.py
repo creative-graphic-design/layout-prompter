@@ -1,6 +1,7 @@
 import json
 import logging
-from typing import Any, Final, List
+from dataclasses import dataclass, field
+from typing import Any, Final, List, Optional, Type
 
 from langchain_core.prompt_values import ChatPromptValue
 from langchain_core.prompts import (
@@ -11,11 +12,17 @@ from langchain_core.prompts import (
 )
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
-from layout_prompter.models import Coordinates, ProcessedLayoutData, SerializedData
+from layout_prompter.models import (
+    Coordinates,
+    LayoutSerializedData,
+    ProcessedLayoutData,
+)
 
 logger = logging.getLogger(__name__)
+
+UNK_TOKEN: Final[str] = "<unk>"
 
 SYSTEM_PROMPT: Final[str] = """\
 Please generate a layout based on the given information. You need to ensure that the generated layout looks realistic, with elements well aligned and avoiding unnecessary overlap.
@@ -48,19 +55,39 @@ class LayoutSerializerInput(BaseModel):
     candidates: List[ProcessedLayoutData]
 
 
-class LayoutSerializer(BaseModel, Runnable):
-    TASK_TYPE: str = ""
-    UNK_TOKEN: Final[str] = "<unk>"
+@dataclass
+class LayoutSerializer(Runnable):
+    task_type: Optional[str] = field(
+        default=None,
+        metadata={
+            "description": "Type of the task to be performed. This should be set in the subclass."
+        },
+    )
+    layout_domain: Optional[str] = field(
+        default=None,
+        metadata={
+            "description": 'Domain of the layout, e.g., "poster", "webpage". This should be set in the subclass.'
+        },
+    )
+    unk_token: Final[str] = UNK_TOKEN
 
-    system_prompt: str = SYSTEM_PROMPT
+    system_prompt: Final[str] = SYSTEM_PROMPT
+    constraint_template: Final[str] = CONTENT_AWARE_CONSTRAINT
+
     add_index_token: bool = True
     add_sep_token: bool = True
     add_unk_token: bool = False
 
-    @field_validator("TASK_TYPE", mode="after")
-    def validate_task_type(cls, value: str) -> str:
-        assert value != "", "TASK_TYPE should be set in the subclass"
-        return value
+    schema: Optional[Type[LayoutSerializedData]] = None
+
+    def __post_init__(self) -> None:
+        assert self.task_type is not None, (
+            f"{self.task_type=} must be set in the subclass"
+        )
+        assert self.layout_domain is not None, (
+            f"{self.layout_domain=} must be set in the subclass"
+        )
+        assert self.schema is not None, f"{self.schema=} must be set in the subclass"
 
     def _convert_to_double_bracket(self, s: str) -> str:
         """Convert a string to double bracket format.
@@ -74,14 +101,13 @@ class LayoutSerializer(BaseModel, Runnable):
         return s.replace("{", "{{").replace("}", "}}")
 
 
+@dataclass
 class ContentAwareSerializer(LayoutSerializer):
-    TASK_TYPE: str = (
+    task_type: str = (
         "content-aware layout generation\n"
         "Please place the following elements to avoid salient content, and underlay must be the background of text or logo."
     )
     name: str = "content-aware-serializer"
-
-    layout_domain: str
 
     def _get_content_constraint(self, data: ProcessedLayoutData) -> str:
         content_bboxes = data.discrete_content_bboxes
@@ -105,16 +131,23 @@ class ContentAwareSerializer(LayoutSerializer):
 
     def _get_serialized_layout(self, data: ProcessedLayoutData) -> str:
         assert data.labels is not None and data.discrete_bboxes is not None
+        assert self.schema is not None, "Schema must be defined for serialization."
+
         labels, discrete_gold_bboxes = data.labels, data.discrete_bboxes
 
-        serialized_data_list = []
+        serialized_data_list: List[LayoutSerializedData] = []
         for class_name, bbox in zip(labels, discrete_gold_bboxes):
             left, top, width, height = bbox
-
-            serialized_data = SerializedData(
-                class_name=class_name,
-                coord=Coordinates(left=left, top=top, width=width, height=height),
-            )
+            serialized_data_dict = {
+                "class_name": class_name,
+                "coord": {
+                    "left": left,
+                    "top": top,
+                    "width": width,
+                    "height": height,
+                },
+            }
+            serialized_data = self.schema(**serialized_data_dict)
             serialized_data_list.append(serialized_data)
         return json.dumps([d.model_dump() for d in serialized_data_list])
 
@@ -150,7 +183,7 @@ class ContentAwareSerializer(LayoutSerializer):
             example_prompt=example_prompt,
         )
         system_prompt = SystemMessagePromptTemplate.from_template(
-            template=SYSTEM_PROMPT,
+            template=self.system_prompt,
         )
         human_prompt = HumanMessagePromptTemplate.from_template(
             template=CONTENT_AWARE_CONSTRAINT
@@ -168,7 +201,7 @@ class ContentAwareSerializer(LayoutSerializer):
             {
                 "canvas_width": input.query.canvas_size.width,
                 "canvas_height": input.query.canvas_size.height,
-                "task_description": self.TASK_TYPE,
+                "task_description": self.task_type,
                 "layout_domain": self.layout_domain,
                 "content_constraint": self._get_content_constraint(input.query),
                 "type_constraint": self._get_type_constraint(input.query),

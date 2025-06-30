@@ -1,33 +1,47 @@
-import datasets as ds
-import pytest
+from typing import Dict, List, cast
 
-from layout_prompter.models import ProcessedLayoutData
+import pytest
+from layout_prompter.models import LayoutData, ProcessedLayoutData
 from layout_prompter.modules.selectors import ContentAwareSelector
-from layout_prompter.settings import PosterLayoutSettings
+from layout_prompter.preprocessors import ContentAwareProcessor
+from layout_prompter.settings import PosterLayoutSettings, TaskSettings
 from layout_prompter.utils.testing import LayoutPrompterTestCase
 
 
-class TestContentAwareCandidateStore(LayoutPrompterTestCase):
+class TestContentAwareSelector(LayoutPrompterTestCase):
     @pytest.fixture
-    def dataset(self) -> ds.DatasetDict:
-        dataset_dir = self.FIXTURES_ROOT / "datasets" / "poster-layout" / "processed"
-        dataset = ds.load_from_disk(dataset_dir)
-        assert isinstance(dataset, ds.DatasetDict)
-        return dataset
+    def processor(self) -> ContentAwareProcessor:
+        return ContentAwareProcessor()
 
     @pytest.fixture
     def num_prompt(self) -> int:
         return 10
 
-    def test_content_aware_selector(self, dataset: ds.DatasetDict, num_prompt: int):
-        settings = PosterLayoutSettings()
+    @pytest.mark.parametrize(
+        argnames="settings",
+        argvalues=(PosterLayoutSettings(),),
+    )
+    def test_content_aware_selector(
+        self,
+        layout_dataset: Dict[str, List[LayoutData]],
+        processor: ContentAwareProcessor,
+        settings: TaskSettings,
+        num_prompt: int,
+    ):
+        tng_dataset, tst_dataset = layout_dataset["train"], layout_dataset["test"]
 
+        examples = cast(
+            List[ProcessedLayoutData],
+            processor.invoke(input=tng_dataset),
+        )
         selector = ContentAwareSelector(
             canvas_size=settings.canvas_size,
-            examples=[ProcessedLayoutData(**example) for example in dataset["train"]],
+            examples=examples,
         )
-
-        test_data = ProcessedLayoutData(**dataset["test"][0])
+        test_data = cast(
+            ProcessedLayoutData,
+            processor.invoke(input=tst_dataset[0]),
+        )
         candidates = selector.select_examples(test_data)
 
         assert len(candidates) == num_prompt

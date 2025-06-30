@@ -28,4 +28,7 @@ typecheck: install
 
 .PHONY: test
 test: install
-	uv run pytest -vsx --log-cli-level=INFO
+	uv run pytest -vs \
+		--log-cli-level=INFO \
+		--import-mode=importlib \
+		--cov

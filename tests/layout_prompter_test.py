@@ -1,25 +1,30 @@
-import random
-from typing import List, cast
+from typing import Dict, List, Type, cast
 
-import datasets as ds
 import pytest
 from langchain.chat_models import init_chat_model
-from tqdm.auto import tqdm
-
 from layout_prompter import LayoutPrompter
-from layout_prompter.models import LayoutData, ProcessedLayoutData
+from layout_prompter.models import (
+    LayoutData,
+    LayoutSerializedData,
+    LayoutSerializedOutputData,
+    PosterLayoutSerializedData,
+    PosterLayoutSerializedOutputData,
+    ProcessedLayoutData,
+    Rico25SerializedData,
+    Rico25SerializedOutputData,
+)
 from layout_prompter.modules import (
     ContentAwareSelector,
     ContentAwareSerializer,
     LayoutPrompterRanker,
 )
 from layout_prompter.preprocessors import ContentAwareProcessor
-from layout_prompter.settings import PosterLayoutSettings
+from layout_prompter.settings import PosterLayoutSettings, Rico25Settings, TaskSettings
 from layout_prompter.utils.testing import LayoutPrompterTestCase
 from layout_prompter.visualizers import ContentAwareVisualizer
 
 
-class TestContentAwareGeneration(LayoutPrompterTestCase):
+class TestLayoutPrompter(LayoutPrompterTestCase):
     @pytest.fixture
     def num_prompt(self) -> int:
         return 10
@@ -36,37 +41,64 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
     def model_id(self) -> str:
         return "gpt-4o"
 
-    def test_content_aware_generation(
+    @pytest.mark.parametrize(
+        argnames=("settings", "input_schema", "output_schema"),
+        argvalues=(
+            (
+                Rico25Settings(),
+                Rico25SerializedData,
+                Rico25SerializedOutputData,
+            ),
+        ),
+    )
+    def test_content_agnostic_generation(
         self,
-        hf_dataset: ds.DatasetDict,
+        layout_dataset: Dict[str, List[LayoutData]],
         num_prompt: int,
         num_return: int,
         model_provider: str,
         model_id: str,
+        settings: TaskSettings,
+        input_schema: Type[LayoutSerializedData],
+        output_schema: Type[LayoutSerializedOutputData],
     ):
-        # Load the PosterLayout settings
-        settings = PosterLayoutSettings()
+        pass
 
-        # Convert HF dataset format to LayoutData format
-        dataset = {
-            split: [
-                LayoutData.model_validate(data)
-                for data in tqdm(hf_dataset[split], desc=f"Processing for {split}")
-            ]
-            for split in hf_dataset
-        }
+    @pytest.mark.parametrize(
+        argnames=("settings", "input_schema", "output_schema"),
+        argvalues=(
+            (
+                PosterLayoutSettings(),
+                PosterLayoutSerializedData,
+                PosterLayoutSerializedOutputData,
+            ),
+        ),
+    )
+    def test_content_aware_generation(
+        self,
+        layout_dataset: Dict[str, List[LayoutData]],
+        num_prompt: int,
+        num_return: int,
+        model_provider: str,
+        model_id: str,
+        settings: TaskSettings,
+        input_schema: Type[LayoutSerializedData],
+        output_schema: Type[LayoutSerializedOutputData],
+    ):
+        tng_dataset = layout_dataset["train"]
+        tst_dataset = layout_dataset["test"]
 
         # Define the content-aware processor and process the data for candidates
         processor = ContentAwareProcessor()
         examples = cast(
-            List[ProcessedLayoutData], processor.invoke(input=dataset["train"])
+            List[ProcessedLayoutData],
+            processor.invoke(input=tng_dataset),
         )
 
         # Select a random test example
-        idx = random.choice(range(len(dataset["test"])))
+        # idx = random.choice(range(len(test_dataset)))
         idx = 443
-        print(f"{idx=}")
-        test_data = dataset["test"][idx]
+        test_data = tst_dataset[idx]
 
         # Process the test data
         processed_test_data = cast(
@@ -82,12 +114,14 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
             ),
             serializer=ContentAwareSerializer(
                 layout_domain=settings.domain,
+                schema=input_schema,
             ),
             llm=init_chat_model(
                 model_provider=model_provider,
                 model=model_id,
             ),
             ranker=LayoutPrompterRanker(),
+            schema=output_schema,
         )
 
         # Invoke the LayoutPrompter
@@ -105,7 +139,7 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
         visualizer_config = {
             "resize_ratio": 2.0,
             "bg_image": test_data.content_image,
-            "content_bboxes": test_data.discrete_content_bboxes,
+            "content_bboxes": processed_test_data.discrete_content_bboxes,
         }
 
         # Create the save directory
@@ -119,3 +153,21 @@ class TestContentAwareGeneration(LayoutPrompterTestCase):
                 config={"configurable": visualizer_config},
             )
             image.save(save_dir / f"{idx=},{i=}.png")
+
+
+class TestContentAgnosticGeneration(LayoutPrompterTestCase):
+    @pytest.fixture
+    def num_prompt(self) -> int:
+        return 10
+
+    @pytest.fixture
+    def num_return(self) -> int:
+        return 10
+
+    @pytest.fixture
+    def model_provider(self) -> str:
+        return "openai"
+
+    @pytest.fixture
+    def model_id(self) -> str:
+        return "gpt-4o"

@@ -41,6 +41,9 @@ class ContentAwareProcessor(Processor):
     _possible_labels: List[pnd.NpNDArray] = []
 
     def _process(self, layout_data: LayoutData) -> ProcessedLayoutData:
+        assert isinstance(layout_data, LayoutData), (
+            f"Input must be of type LayoutData. Got: {layout_data=}"
+        )
         bboxes, labels = layout_data.bboxes, layout_data.labels
         is_train = bboxes is not None and labels is not None
 

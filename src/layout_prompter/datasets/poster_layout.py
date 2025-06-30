@@ -1,8 +1,8 @@
 import logging
 
-import datasets as ds
 import numpy as np
 
+import datasets as ds
 from layout_prompter.models import LayoutData
 from layout_prompter.settings import PosterLayoutSettings
 from layout_prompter.transforms import SaliencyMapToBboxes
@@ -25,25 +25,28 @@ def _filter_empty_content_bboxes(example):
     return example["content_bboxes"] is not None
 
 
-def load_poster_layout(
+def load_raw_poste_layout(
     dataset_name: str = "creative-graphic-design/PKU-PosterLayout",
-    filter_threshold: int = 100,
-    num_proc: int = 32,
-    return_raw: bool = False,
 ) -> ds.DatasetDict:
-    # Load the PosterLayout settings
-    settings = PosterLayoutSettings()
-
     # Load the PosterLayout dataset
     dataset = ds.load_dataset(
         dataset_name,
         verification_mode="no_checks",
     )
     assert isinstance(dataset, ds.DatasetDict)
+    return dataset
 
-    if return_raw:
-        # Return the raw dataset without any processing
-        return dataset
+
+def load_poster_layout(
+    dataset_name: str = "creative-graphic-design/PKU-PosterLayout",
+    filter_threshold: int = 100,
+    num_proc: int = 32,
+) -> ds.DatasetDict:
+    # Load the PosterLayout settings
+    settings = PosterLayoutSettings()
+
+    # Load the PosterLayout dataset
+    dataset = load_raw_poste_layout(dataset_name)
 
     # Apply filtering to remove invalid data
     dataset = dataset.filter(

@@ -1,5 +1,5 @@
 import pathlib
-from typing import List
+from typing import List, get_args
 
 from pydantic import BaseModel
 from pydantic_settings import (
@@ -8,6 +8,8 @@ from pydantic_settings import (
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
+
+from layout_prompter.models.serialized_data import PosterClassNames
 
 
 class CanvasSize(BaseModel):
@@ -29,8 +31,20 @@ class TaskSettings(BaseSettings):
 
 
 class PosterLayoutSettings(TaskSettings):
+    labels: List[str] = list(get_args(PosterClassNames))
+
     model_config = SettingsConfigDict(
         yaml_file=pathlib.Path(__file__).resolve().parents[2]
         / "settings"
         / "poster_layout.yaml",
+    )
+
+
+class Rico25Settings(TaskSettings):
+    labels: List[str] = list(get_args(PosterClassNames))
+
+    model_config = SettingsConfigDict(
+        yaml_file=pathlib.Path(__file__).resolve().parents[2]
+        / "settings"
+        / "rico25.yaml",
     )
