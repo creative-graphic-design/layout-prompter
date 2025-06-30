@@ -1,35 +1,50 @@
+from typing import Dict, List, cast
+
 import pytest
-from layout_prompter.models import ProcessedLayoutData
+from layout_prompter.models import LayoutData, ProcessedLayoutData
 from layout_prompter.modules.selectors import ContentAwareSelector
 from layout_prompter.modules.serializers import (
     ContentAwareSerializer,
     LayoutSerializerInput,
 )
-from layout_prompter.settings import PosterLayoutSettings
+from layout_prompter.preprocessors import ContentAwareProcessor
+from layout_prompter.settings import PosterLayoutSettings, TaskSettings
 from layout_prompter.utils.testing import LayoutPrompterTestCase
-
-import datasets as ds
 
 
 class TestContentAwareSerializer(LayoutPrompterTestCase):
     @pytest.fixture
-    def dataset(self) -> ds.DatasetDict:
-        dataset_dir = self.FIXTURES_ROOT / "datasets" / "poster-layout" / "processed"
-        dataset = ds.load_from_disk(dataset_dir)
-        assert isinstance(dataset, ds.DatasetDict)
-        return dataset
+    def processor(self) -> ContentAwareProcessor:
+        return ContentAwareProcessor()
 
     @pytest.fixture
     def num_prompt(self) -> int:
         return 10
 
-    def test_content_aware_serializer(self, dataset: ds.DatasetDict):
-        settings = PosterLayoutSettings()
+    @pytest.mark.parametrize(
+        argnames="settings",
+        argvalues=(PosterLayoutSettings(),),
+    )
+    def test_content_aware_serializer(
+        self,
+        layout_dataset: Dict[str, List[LayoutData]],
+        processor: ContentAwareProcessor,
+        settings: TaskSettings,
+    ):
+        tng_dataset, tst_dataset = layout_dataset["train"], layout_dataset["test"]
+
+        examples = cast(
+            List[ProcessedLayoutData],
+            processor.invoke(input=tng_dataset),
+        )
         selector = ContentAwareSelector(
             canvas_size=settings.canvas_size,
-            examples=[ProcessedLayoutData(**example) for example in dataset["train"]],
+            examples=examples,
         )
-        test_data = ProcessedLayoutData(**dataset["test"][0])
+        test_data = cast(
+            ProcessedLayoutData,
+            processor.invoke(input=tst_dataset[0]),
+        )
         candidates = selector.select_examples(test_data)
 
         serializer = ContentAwareSerializer()
