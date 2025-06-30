@@ -1,7 +1,7 @@
 import datasets as ds
 
 
-def load_rico(
+def load_raw_rico(
     dataset_name: str = "creative-graphic-design/Rico",
 ) -> ds.DatasetDict:
     dataset = ds.load_dataset(
@@ -11,3 +11,8 @@ def load_rico(
     assert isinstance(dataset, ds.DatasetDict)
 
     return dataset
+
+
+def load_rico(dataset_name: str = "creative-graphic-design/Rico") -> ds.DatasetDict:
+    dataset = load_raw_rico(dataset_name)
+    raise NotImplementedError
