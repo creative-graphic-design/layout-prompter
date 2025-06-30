@@ -1,5 +1,4 @@
 import datasets as ds
-import pytest
 from typing import get_args
 
 from layout_prompter.models.serialized_data import PosterClassNames

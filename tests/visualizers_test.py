@@ -1,4 +1,3 @@
-import random
 from typing import Dict, List, Type, cast
 
 import pytest
