@@ -88,6 +88,7 @@ class LayoutSerializer(Runnable):
         return s.replace("{", "{{").replace("}", "}}")
 
 
+@dataclass
 class ContentAwareSerializer(LayoutSerializer):
     task_type: str = (
         "content-aware layout generation\n"
