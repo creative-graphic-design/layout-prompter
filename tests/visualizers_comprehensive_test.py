@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from layout_prompter.models import (
     Coordinates,
+    PosterLayoutSerializedOutputData,
     ProcessedLayoutData,
     SerializedData,
     SerializedOutputData,
@@ -34,10 +35,16 @@ class TestVisualizerBase:
             gold_bboxes=np.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]),
             orig_bboxes=np.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]),
             orig_labels=np.array(["text", "logo"]),
-            discrete_bboxes=np.array([[10, 30, 30, 60], [50, 90, 70, 120]]),
-            discrete_gold_bboxes=np.array([[10, 30, 30, 60], [50, 90, 70, 120]]),
+            discrete_bboxes=np.array(
+                [[10, 30, 30, 60], [50, 90, 70, 120]], dtype=np.int32
+            ),
+            discrete_gold_bboxes=np.array(
+                [[10, 30, 30, 60], [50, 90, 70, 120]], dtype=np.int32
+            ),
             discrete_content_bboxes=None,
-            canvas_size={"width": 100, "height": 150},
+            canvas_size=CanvasSize(width=100, height=150),
+            encoded_image=None,
+            content_bboxes=None,
         )
 
     @pytest.fixture
@@ -61,7 +68,11 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
     def visualizer(
         self, canvas_size: CanvasSize, labels: list[str]
     ) -> ContentAgnosticVisualizer:
-        return ContentAgnosticVisualizer(canvas_size=canvas_size, labels=labels)
+        return ContentAgnosticVisualizer(
+            canvas_size=canvas_size,
+            labels=labels,
+            schema=PosterLayoutSerializedOutputData,
+        )
 
     def test_convert_to_serialized_output_data(
         self,
@@ -98,10 +109,12 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
             gold_bboxes=np.array([[0.1, 0.2, 0.3, 0.4]]),
             orig_bboxes=np.array([[0.1, 0.2, 0.3, 0.4]]),
             orig_labels=np.array(["text"]),
-            discrete_bboxes=np.array([[10, 30, 30, 60]]),
-            discrete_gold_bboxes=np.array([[10, 30, 30, 60]]),
+            discrete_bboxes=np.array([[10, 30, 30, 60]], dtype=np.int32),
+            discrete_gold_bboxes=np.array([[10, 30, 30, 60]], dtype=np.int32),
             discrete_content_bboxes=None,
-            canvas_size={"width": 100, "height": 150},
+            canvas_size=CanvasSize(width=100, height=150),
+            encoded_image=None,
+            content_bboxes=None,
         )
 
         with pytest.raises(AssertionError):
@@ -119,9 +132,11 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
             orig_bboxes=np.array([[0.1, 0.2, 0.3, 0.4]]),
             orig_labels=np.array(["text"]),
             discrete_bboxes=None,  # This should cause assertion error
-            discrete_gold_bboxes=np.array([[10, 30, 30, 60]]),
+            discrete_gold_bboxes=np.array([[10, 30, 30, 60]], dtype=np.int32),
             discrete_content_bboxes=None,
-            canvas_size={"width": 100, "height": 150},
+            canvas_size=CanvasSize(width=100, height=150),
+            encoded_image=None,
+            content_bboxes=None,
         )
 
         with pytest.raises(AssertionError):
@@ -298,7 +313,11 @@ class TestContentAwareVisualizer(TestVisualizerBase):
     def visualizer(
         self, canvas_size: CanvasSize, labels: list[str]
     ) -> ContentAwareVisualizer:
-        return ContentAwareVisualizer(canvas_size=canvas_size, labels=labels)
+        return ContentAwareVisualizer(
+            canvas_size=canvas_size,
+            labels=labels,
+            schema=PosterLayoutSerializedOutputData,
+        )
 
     def test_draw_content_bboxes_basic(
         self,
