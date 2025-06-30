@@ -2,10 +2,10 @@ import numpy as np
 import pytest
 from layout_prompter.models import (
     Coordinates,
+    LayoutSerializedData,
+    LayoutSerializedOutputData,
     PosterLayoutSerializedOutputData,
     ProcessedLayoutData,
-    SerializedData,
-    SerializedOutputData,
 )
 from layout_prompter.settings import CanvasSize
 from layout_prompter.visualizers import (
@@ -48,14 +48,14 @@ class TestVisualizerBase:
         )
 
     @pytest.fixture
-    def serialized_output_data(self) -> SerializedOutputData:
-        return SerializedOutputData(
+    def serialized_output_data(self) -> LayoutSerializedOutputData:
+        return LayoutSerializedOutputData(
             layouts=[
-                SerializedData(
+                LayoutSerializedData(
                     class_name="text",
                     coord=Coordinates(left=10, top=30, width=30, height=60),
                 ),
-                SerializedData(
+                LayoutSerializedData(
                     class_name="logo",
                     coord=Coordinates(left=50, top=90, width=70, height=120),
                 ),
@@ -81,7 +81,7 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
     ):
         result = visualizer._convert_to_serialized_output_data(processed_layout_data)
 
-        assert isinstance(result, SerializedOutputData)
+        assert isinstance(result, LayoutSerializedOutputData)
         assert len(result.layouts) == 2
 
         # Check first layout
@@ -144,15 +144,15 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
 
     def test_get_sorted_layouts_by_area(self, visualizer: ContentAgnosticVisualizer):
         layouts = [
-            SerializedData(
+            LayoutSerializedData(
                 class_name="small",
                 coord=Coordinates(left=0, top=0, width=10, height=10),
             ),  # area = 100
-            SerializedData(
+            LayoutSerializedData(
                 class_name="large",
                 coord=Coordinates(left=0, top=0, width=20, height=30),
             ),  # area = 600
-            SerializedData(
+            LayoutSerializedData(
                 class_name="medium",
                 coord=Coordinates(left=0, top=0, width=15, height=20),
             ),  # area = 300
@@ -172,11 +172,11 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
 
     def test_get_sorted_layouts_same_area(self, visualizer: ContentAgnosticVisualizer):
         layouts = [
-            SerializedData(
+            LayoutSerializedData(
                 class_name="first",
                 coord=Coordinates(left=0, top=0, width=10, height=10),
             ),  # area = 100
-            SerializedData(
+            LayoutSerializedData(
                 class_name="second",
                 coord=Coordinates(left=0, top=0, width=5, height=20),
             ),  # area = 100
@@ -192,7 +192,7 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
         # Create a test image
         image = Image.new("RGB", (200, 200), (255, 255, 255))
 
-        layout = SerializedData(
+        layout = LayoutSerializedData(
             class_name="text", coord=Coordinates(left=10, top=20, width=50, height=30)
         )
 
@@ -209,7 +209,7 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
     ):
         image = Image.new("RGB", (200, 200), (255, 255, 255))
 
-        layout = SerializedData(
+        layout = LayoutSerializedData(
             class_name="text", coord=Coordinates(left=10, top=20, width=50, height=30)
         )
 
@@ -223,7 +223,7 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
     ):
         image = Image.new("RGB", (200, 200), (255, 255, 255))
 
-        layout = SerializedData(
+        layout = LayoutSerializedData(
             class_name="unknown_class",  # Not in labels list
             coord=Coordinates(left=10, top=20, width=50, height=30),
         )
@@ -247,7 +247,7 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
     def test_invoke_with_serialized_output_data(
         self,
         visualizer: ContentAgnosticVisualizer,
-        serialized_output_data: SerializedOutputData,
+        serialized_output_data: LayoutSerializedOutputData,
     ):
         config = {"configurable": ContentAgnosticVisualizerConfig().model_dump()}
 
@@ -259,7 +259,7 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
     def test_invoke_with_custom_resize_ratio(
         self,
         visualizer: ContentAgnosticVisualizer,
-        serialized_output_data: SerializedOutputData,
+        serialized_output_data: LayoutSerializedOutputData,
     ):
         config = {
             "configurable": ContentAgnosticVisualizerConfig(
@@ -275,7 +275,7 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
     def test_invoke_with_custom_background_color(
         self,
         visualizer: ContentAgnosticVisualizer,
-        serialized_output_data: SerializedOutputData,
+        serialized_output_data: LayoutSerializedOutputData,
     ):
         config = {
             "configurable": ContentAgnosticVisualizerConfig(
@@ -291,7 +291,7 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
     def test_invoke_with_none_config(
         self,
         visualizer: ContentAgnosticVisualizer,
-        serialized_output_data: SerializedOutputData,
+        serialized_output_data: LayoutSerializedOutputData,
     ):
         # Should use default config when None is passed
         result = visualizer.invoke(serialized_output_data, config=None)
@@ -388,7 +388,7 @@ class TestContentAwareVisualizer(TestVisualizerBase):
     def test_invoke_with_serialized_output_data(
         self,
         visualizer: ContentAwareVisualizer,
-        serialized_output_data: SerializedOutputData,
+        serialized_output_data: LayoutSerializedOutputData,
         bg_image: Image.Image,
     ):
         config = {
@@ -403,7 +403,7 @@ class TestContentAwareVisualizer(TestVisualizerBase):
     def test_invoke_without_content_bboxes(
         self,
         visualizer: ContentAwareVisualizer,
-        serialized_output_data: SerializedOutputData,
+        serialized_output_data: LayoutSerializedOutputData,
         bg_image: Image.Image,
     ):
         # Test with content_bboxes = None
@@ -421,7 +421,7 @@ class TestContentAwareVisualizer(TestVisualizerBase):
     def test_invoke_with_resize_ratio(
         self,
         visualizer: ContentAwareVisualizer,
-        serialized_output_data: SerializedOutputData,
+        serialized_output_data: LayoutSerializedOutputData,
         bg_image: Image.Image,
     ):
         config = {
@@ -438,7 +438,7 @@ class TestContentAwareVisualizer(TestVisualizerBase):
     def test_invoke_with_different_bg_image_mode(
         self,
         visualizer: ContentAwareVisualizer,
-        serialized_output_data: SerializedOutputData,
+        serialized_output_data: LayoutSerializedOutputData,
     ):
         # Test with RGBA background image
         rgba_image = Image.new("RGBA", (100, 150), (128, 128, 128, 255))
@@ -456,7 +456,7 @@ class TestContentAwareVisualizer(TestVisualizerBase):
     def test_invoke_image_resizing(
         self,
         visualizer: ContentAwareVisualizer,
-        serialized_output_data: SerializedOutputData,
+        serialized_output_data: LayoutSerializedOutputData,
     ):
         # Test with background image of different size
         large_bg_image = Image.new("RGB", (200, 300), (128, 128, 128))

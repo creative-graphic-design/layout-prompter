@@ -9,10 +9,6 @@ from .serialized_data import (
     Rico25SerializedOutputData,
 )
 
-# Aliases for backward compatibility
-SerializedData = LayoutSerializedData
-SerializedOutputData = LayoutSerializedOutputData
-
 __all__ = [
     "LayoutData",
     "ProcessedLayoutData",
@@ -22,11 +18,6 @@ __all__ = [
     #
     "LayoutSerializedData",
     "LayoutSerializedOutputData",
-    #
-    # Backward compatibility aliases
-    #
-    "SerializedData",
-    "SerializedOutputData",
     #
     # Poster Layout
     #

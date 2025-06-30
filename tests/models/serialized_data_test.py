@@ -1,12 +1,12 @@
 import pytest
 from layout_prompter.models import (
     Coordinates,
+    LayoutSerializedData,
+    LayoutSerializedOutputData,
     PosterLayoutSerializedData,
     PosterLayoutSerializedOutputData,
     Rico25SerializedData,
     Rico25SerializedOutputData,
-    SerializedData,
-    SerializedOutputData,
 )
 from pydantic import ValidationError
 
@@ -265,7 +265,7 @@ def test_rico25_serialized_output_data_edge_cases():
 def test_generic_serialized_data():
     """Generic SerializedDataクラスのテスト"""
     # 基本的なインスタンス作成のテスト
-    generic_data = SerializedData(
+    generic_data = LayoutSerializedData(
         class_name="test_class", coord=Coordinates(left=10, top=20, width=30, height=40)
     )
 
@@ -280,15 +280,15 @@ def test_generic_serialized_data():
 def test_generic_serialized_output_data():
     """Generic SerializedOutputDataクラスのテスト"""
     # テスト用のSerializedDataインスタンスを作成
-    data1 = SerializedData(
+    data1 = LayoutSerializedData(
         class_name="class1", coord=Coordinates(left=10, top=20, width=30, height=40)
     )
-    data2 = SerializedData(
+    data2 = LayoutSerializedData(
         class_name="class2", coord=Coordinates(left=50, top=60, width=70, height=80)
     )
 
     # SerializedOutputDataインスタンスの作成
-    output_data = SerializedOutputData(layouts=[data1, data2])
+    output_data = LayoutSerializedOutputData(layouts=[data1, data2])
 
     # 属性が正しく設定されていることを確認
     assert len(output_data.layouts) == 2
@@ -309,14 +309,14 @@ def test_type_compatibility():
     )
 
     # 基底型として参照できることを確認
-    base_poster: SerializedData = poster_data
-    base_rico: SerializedData = rico_data
+    base_poster: LayoutSerializedData = poster_data
+    base_rico: LayoutSerializedData = rico_data
 
     assert base_poster.class_name == "text"
     assert base_rico.class_name == "image"
 
     # Generic の出力データでも互換性があることを確認
-    mixed_output = SerializedOutputData(layouts=[poster_data, rico_data])
+    mixed_output = LayoutSerializedOutputData(layouts=[poster_data, rico_data])
     assert len(mixed_output.layouts) == 2
     assert mixed_output.layouts[0].class_name == "text"
     assert mixed_output.layouts[1].class_name == "image"
@@ -333,8 +333,8 @@ def test_inheritance_structure():
     )
 
     # isinstance での型チェック
-    assert isinstance(poster_data, SerializedData)
-    assert isinstance(rico_data, SerializedData)
+    assert isinstance(poster_data, LayoutSerializedData)
+    assert isinstance(rico_data, LayoutSerializedData)
     assert isinstance(poster_data, PosterLayoutSerializedData)
     assert isinstance(rico_data, Rico25SerializedData)
 
@@ -345,8 +345,8 @@ def test_inheritance_structure():
 
 def test_class_name_validation():
     """クラス名のバリデーションテスト"""
-    # SerializedData は任意の文字列を受け入れる
-    generic_data = SerializedData(
+    # LayoutSerializedData は任意の文字列を受け入れる
+    generic_data = LayoutSerializedData(
         class_name="any_string", coord=Coordinates(left=10, top=20, width=30, height=40)
     )
     assert generic_data.class_name == "any_string"
@@ -377,12 +377,14 @@ def test_output_data_flexibility():
     rico_data = Rico25SerializedData(
         class_name="image", coord=Coordinates(left=50, top=60, width=70, height=80)
     )
-    generic_data = SerializedData(
+    generic_data = LayoutSerializedData(
         class_name="custom", coord=Coordinates(left=100, top=120, width=130, height=140)
     )
 
-    # SerializedOutputData で混在させる
-    mixed_output = SerializedOutputData(layouts=[poster_data, rico_data, generic_data])
+    # LayoutSerializedOutputData で混在させる
+    mixed_output = LayoutSerializedOutputData(
+        layouts=[poster_data, rico_data, generic_data]
+    )
     assert len(mixed_output.layouts) == 3
     assert mixed_output.layouts[0].class_name == "text"
     assert mixed_output.layouts[1].class_name == "image"
@@ -404,11 +406,11 @@ def test_backward_compatibility():
     coord = Coordinates(left=10, top=20, width=30, height=40)
 
     # 基本的なSerializedDataの使用
-    data = SerializedData(class_name="test", coord=coord)
+    data = LayoutSerializedData(class_name="test", coord=coord)
     assert data.class_name == "test"
     assert data.coord.to_tuple() == (10, 20, 30, 40)
 
     # SerializedOutputDataの使用
-    output = SerializedOutputData(layouts=[data])
+    output = LayoutSerializedOutputData(layouts=[data])
     assert len(output.layouts) == 1
     assert output.layouts[0].class_name == "test"
