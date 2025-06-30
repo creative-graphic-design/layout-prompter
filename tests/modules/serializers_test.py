@@ -1,7 +1,12 @@
-from typing import Dict, List, cast
+from typing import Dict, List, Type, cast
 
 import pytest
-from layout_prompter.models import LayoutData, ProcessedLayoutData
+from layout_prompter.models import (
+    LayoutData,
+    LayoutSerializedData,
+    PosterLayoutSerializedData,
+    ProcessedLayoutData,
+)
 from layout_prompter.modules.selectors import ContentAwareSelector
 from layout_prompter.modules.serializers import (
     ContentAwareSerializer,
@@ -17,19 +22,21 @@ class TestContentAwareSerializer(LayoutPrompterTestCase):
     def processor(self) -> ContentAwareProcessor:
         return ContentAwareProcessor()
 
-    @pytest.fixture
-    def num_prompt(self) -> int:
-        return 10
-
     @pytest.mark.parametrize(
-        argnames="settings",
-        argvalues=(PosterLayoutSettings(),),
+        argnames=("settings", "input_schema"),
+        argvalues=(
+            (
+                PosterLayoutSettings(),
+                PosterLayoutSerializedData,
+            ),
+        ),
     )
     def test_content_aware_serializer(
         self,
         layout_dataset: Dict[str, List[LayoutData]],
         processor: ContentAwareProcessor,
         settings: TaskSettings,
+        input_schema: Type[LayoutSerializedData],
     ):
         tng_dataset, tst_dataset = layout_dataset["train"], layout_dataset["test"]
 
@@ -41,16 +48,21 @@ class TestContentAwareSerializer(LayoutPrompterTestCase):
             canvas_size=settings.canvas_size,
             examples=examples,
         )
-        test_data = cast(
-            ProcessedLayoutData,
-            processor.invoke(input=tst_dataset[0]),
+
+        tst_data = tst_dataset[0]
+        processed_test_data = cast(
+            ProcessedLayoutData, processor.invoke(input=tst_data)
         )
-        candidates = selector.select_examples(test_data)
+        candidates = selector.select_examples(processed_test_data)
 
-        serializer = ContentAwareSerializer()
-
+        serializer = ContentAwareSerializer(
+            layout_domain=settings.domain,
+            schema=input_schema,
+        )
         prompt = serializer.invoke(
-            input=LayoutSerializerInput(query=test_data, candidates=candidates)
+            input=LayoutSerializerInput(
+                query=processed_test_data, candidates=candidates
+            )
         )
         for message in prompt.to_messages():
             message.pretty_print()

@@ -1,6 +1,6 @@
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Final, List, Optional, Type
 
 from langchain_core.prompt_values import ChatPromptValue
@@ -57,8 +57,18 @@ class LayoutSerializerInput(BaseModel):
 
 @dataclass
 class LayoutSerializer(Runnable):
-    task_type: Optional[str] = None
-    layout_domain: Optional[str] = None
+    task_type: Optional[str] = field(
+        default=None,
+        metadata={
+            "description": "Type of the task to be performed. This should be set in the subclass."
+        },
+    )
+    layout_domain: Optional[str] = field(
+        default=None,
+        metadata={
+            "description": 'Domain of the layout, e.g., "poster", "webpage". This should be set in the subclass.'
+        },
+    )
     unk_token: Final[str] = UNK_TOKEN
 
     system_prompt: Final[str] = SYSTEM_PROMPT
