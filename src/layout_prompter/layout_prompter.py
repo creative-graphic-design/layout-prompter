@@ -51,10 +51,11 @@ class LayoutPrompter(Runnable):
         messages = self.serializer.invoke(input=serializer_input)
 
         # Generate batched layouts
-        structured_llm = self.llm.with_structured_output(self.schema)
         outputs = cast(
             List[LayoutSerializedOutputData],
-            structured_llm.batch([messages] * conf.num_return),
+            self.llm.with_structured_output(
+                schema=self.schema,
+            ).batch([messages] * conf.num_return),
         )
 
         # Rank the generated layouts
