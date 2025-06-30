@@ -2,16 +2,16 @@ import copy
 from typing import Any, Union
 
 import numpy as np
-from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
 from loguru import logger
 from pydantic import BaseModel
 
 from layout_prompter.models import LayoutData, ProcessedLayoutData
+from layout_prompter.transforms import BaseTransform
 from layout_prompter.utils import decapsulate
 
 
-class DiscretizeBboxes(BaseModel, Runnable):
+class DiscretizeBboxes(BaseModel, BaseTransform):
     name: str = "discretize-bboxes"
 
     def discretize(self, bboxes: np.ndarray, width: int, height: int) -> np.ndarray:
