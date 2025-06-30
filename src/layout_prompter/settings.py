@@ -38,3 +38,13 @@ class PosterLayoutSettings(TaskSettings):
         / "settings"
         / "poster_layout.yaml",
     )
+
+
+class Rico25Settings(TaskSettings):
+    labels: List[str] = list(get_args(PosterClassNames))
+
+    model_config = SettingsConfigDict(
+        yaml_file=pathlib.Path(__file__).resolve().parents[2]
+        / "settings"
+        / "rico25.yaml",
+    )
