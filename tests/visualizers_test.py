@@ -1,8 +1,9 @@
 import random
+from typing import Dict, List
 
 import pytest
 from langchain.chat_models import init_chat_model
-from layout_prompter.models import ProcessedLayoutData, SerializedOutputData
+from layout_prompter.models import LayoutData, ProcessedLayoutData, SerializedOutputData
 from layout_prompter.modules.selectors import ContentAwareSelector
 from layout_prompter.modules.serializers import (
     ContentAwareSerializer,
@@ -12,17 +13,8 @@ from layout_prompter.settings import PosterLayoutSettings
 from layout_prompter.utils.testing import LayoutPrompterTestCase
 from layout_prompter.visualizers import ContentAwareVisualizer, generate_color_palette
 
-import datasets as ds
-
 
 class TestContentAwareVisualizer(LayoutPrompterTestCase):
-    @pytest.fixture
-    def dataset(self) -> ds.DatasetDict:
-        dataset_dir = self.FIXTURES_ROOT / "datasets" / "poster-layout" / "processed"
-        dataset = ds.load_from_disk(dataset_dir)
-        assert isinstance(dataset, ds.DatasetDict)
-        return dataset
-
     @pytest.fixture
     def num_prompt(self) -> int:
         return 10
@@ -40,19 +32,24 @@ class TestContentAwareVisualizer(LayoutPrompterTestCase):
         assert len(palette) == num_colors
 
     def test_content_aware_visualizer(
-        self, dataset: ds.DatasetDict, num_prompt: int, num_return: int
+        self,
+        layout_dataset: Dict[str, List[LayoutData]],
+        num_prompt: int,
+        num_return: int,
     ):
         settings = PosterLayoutSettings()
+        tng_dataset = layout_dataset["train"]
+        tst_dataset = layout_dataset["test"]
 
         selector = ContentAwareSelector(
             num_prompt=num_prompt,
             canvas_size=settings.canvas_size,
-            examples=[ProcessedLayoutData(**example) for example in dataset["train"]],
+            examples=[ProcessedLayoutData(**example) for example in tng_dataset],
         )
 
-        idx = random.choice(range(len(dataset["test"])))
+        idx = random.choice(range(len(layout_dataset["test"])))
 
-        test_data = ProcessedLayoutData(**dataset["test"][idx])
+        test_data = ProcessedLayoutData(**tst_dataset[idx])
         candidates = selector.select_examples(test_data)
 
         serializer = ContentAwareSerializer(
