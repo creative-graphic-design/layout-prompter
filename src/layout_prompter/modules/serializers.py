@@ -1,5 +1,4 @@
 import json
-import logging
 from dataclasses import dataclass, field
 from typing import Any, Final, List, Optional, Type
 
@@ -12,6 +11,7 @@ from langchain_core.prompts import (
 )
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
+from loguru import logger
 from pydantic import BaseModel
 
 from layout_prompter.models import (
@@ -19,8 +19,6 @@ from layout_prompter.models import (
     LayoutSerializedData,
     ProcessedLayoutData,
 )
-
-logger = logging.getLogger(__name__)
 
 UNK_TOKEN: Final[str] = "<unk>"
 
@@ -43,10 +41,11 @@ CONTENT_AWARE_CONSTRAINT: Final[str] = """\
 {content_constraint}
 
 ## Element Type Constraint
-{type_constraint}"""
+{type_constraint}
+
+# Serialized Layout"""
 
 SERIALIZED_LAYOUT: Final[str] = """\
-# Serialized Layout
 {serialized_layout}"""
 
 
@@ -140,12 +139,7 @@ class ContentAwareSerializer(LayoutSerializer):
             left, top, width, height = bbox
             serialized_data_dict = {
                 "class_name": class_name,
-                "coord": {
-                    "left": left,
-                    "top": top,
-                    "width": width,
-                    "height": height,
-                },
+                "coord": {"left": left, "top": top, "width": width, "height": height},
             }
             serialized_data = self.schema(**serialized_data_dict)
             serialized_data_list.append(serialized_data)
@@ -154,9 +148,11 @@ class ContentAwareSerializer(LayoutSerializer):
     def invoke(
         self,
         input: LayoutSerializerInput,
-        config: RunnableConfig | None = None,
+        config: Optional[RunnableConfig] = None,
         **kwargs: Any,
     ) -> ChatPromptValue:
+        logger.debug(f"Invoking ContentAwareSerializer with input: {input}")
+
         example_prompt = ChatPromptTemplate.from_messages(
             [
                 CONTENT_AWARE_CONSTRAINT,
@@ -208,6 +204,8 @@ class ContentAwareSerializer(LayoutSerializer):
             }
         )
         assert isinstance(final_prompt, ChatPromptValue)
-        logger.debug(final_prompt.to_messages())
+
+        for message in final_prompt.to_messages():
+            logger.debug(message.pretty_repr())
 
         return final_prompt
