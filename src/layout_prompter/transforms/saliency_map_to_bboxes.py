@@ -2,13 +2,12 @@ from typing import Any, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
-from langchain_core.runnables import Runnable
-from pydantic import BaseModel
+from langchain_core.runnables import RunnableSerializable
 
 from layout_prompter.typehints import PilImage
 
 
-class SaliencyMapToBboxes(BaseModel, Runnable):
+class SaliencyMapToBboxes(RunnableSerializable):
     name: str = "saliency-map-to-bboxes"
 
     threshold: int = 100
