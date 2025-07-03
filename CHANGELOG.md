@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.3.0](https://github.com/creative-graphic-design/layout-prompter/compare/v0.2.0...v0.3.0) - 2025-07-03
+- feat: add worker/concurrency management for layout processing by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/17
+- feat: update version to 0.3.0 in pyproject.toml and uv.lock by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/19
+
 ## [v0.2.0](https://github.com/creative-graphic-design/layout-prompter/compare/v0.1.1...v0.2.0) - 2025-07-03
 - feat: enhance layout processing with saliency maps and output models by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/14
 - feat: update version to 0.2.0 in pyproject.toml and uv.lock by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/16
