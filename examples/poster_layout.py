@@ -62,9 +62,9 @@ def main(args: argparse.Namespace) -> None:
         for split in hf_dataset
     }
 
-    processor = ContentAwareProcessor()
+    processor = ContentAwareProcessor(canvas_size=settings.canvas_size)
     candidate_examples = cast(
-        List[ProcessedLayoutData], processor.invoke(input=dataset["train"])
+        List[ProcessedLayoutData], processor.batch(inputs=dataset["train"])
     )
     # inference_examples = processor.invoke(input=dataset["test"])
 
@@ -106,7 +106,7 @@ def main(args: argparse.Namespace) -> None:
     print(f"Saving visualizations to {save_dir}")
 
     visualizations = visualizer.batch(
-        outputs, config={"configurable": visualizer_config}
+        outputs.ranked_outputs, config={"configurable": visualizer_config}
     )
     for i, visualization in enumerate(visualizations):
         visualization.save(save_dir / f"{idx=},{i=}.png")
