@@ -77,8 +77,8 @@ class LayoutSelector(BaseExampleSelector, BaseModel):
 
 
 class ContentAwareSelectorOutput(LayoutSelectorOutput):
-    query_saliency_map: pnd.NpNDArray
-    candidate_saliency_maps: List[pnd.NpNDArray]
+    query_saliency_map: Optional[pnd.NpNDArray] = None
+    candidate_saliency_maps: Optional[List[pnd.NpNDArray]] = None
 
 
 def calculate_iou(
