@@ -2,6 +2,7 @@ import argparse
 import pathlib
 from typing import List, cast
 
+from core.utils.workers import get_num_workers
 from langchain.chat_models import init_chat_model
 from layout_prompter import LayoutPrompter
 from layout_prompter.datasets import load_poster_layout
@@ -42,6 +43,12 @@ def parse_args() -> argparse.Namespace:
         help="Model ID to use",
     )
     parser.add_argument(
+        "--num-workers",
+        type=int,
+        default=None,
+        help="Number of workers for processing",
+    )
+    parser.add_argument(
         "--save-dir",
         type=pathlib.Path,
         default=pathlib.Path(__file__).parent.resolve() / "generated" / "content_aware",
@@ -64,7 +71,13 @@ def main(args: argparse.Namespace) -> None:
 
     processor = ContentAwareProcessor(canvas_size=settings.canvas_size)
     candidate_examples = cast(
-        List[ProcessedLayoutData], processor.batch(inputs=dataset["train"])
+        List[ProcessedLayoutData],
+        processor.batch(
+            inputs=dataset["train"],
+            config={
+                "max_concurrency": args.num_workers or get_num_workers(),
+            },
+        ),
     )
     # inference_examples = processor.invoke(input=dataset["test"])
 
@@ -106,7 +119,11 @@ def main(args: argparse.Namespace) -> None:
     print(f"Saving visualizations to {save_dir}")
 
     visualizations = visualizer.batch(
-        outputs.ranked_outputs, config={"configurable": visualizer_config}
+        outputs.ranked_outputs,
+        config={
+            "configurable": visualizer_config,
+            "max_concurrency": args.num_workers,
+        },
     )
     for i, visualization in enumerate(visualizations):
         visualization.save(save_dir / f"{idx=},{i=}.png")
