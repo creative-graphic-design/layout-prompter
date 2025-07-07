@@ -1,12 +1,11 @@
 import random
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
-import pydantic_numpy.typing as pnd
 from langchain_core.runnables import RunnableSerializable
 from langchain_core.runnables.config import RunnableConfig
 from loguru import logger
-from pydantic import field_validator
+from pydantic import ConfigDict, field_validator
 
 from layout_prompter.models import LayoutData, ProcessedLayoutData
 from layout_prompter.settings import CanvasSize
@@ -24,6 +23,10 @@ class ProcessorConfig(Configuration):
 
 class Processor(RunnableSerializable):
     """Base class for all processors."""
+
+    model_config = ConfigDict(
+        frozen=True,  # for hashable Processor
+    )
 
 
 class ContentAwareProcessorConfig(ProcessorConfig):
@@ -50,7 +53,7 @@ class ContentAwareProcessor(Processor):
 
     # Store the possible labels from the training data.
     # During testing, randomly sample from this group for generation.
-    _possible_labels: List[pnd.NpNDArray] = []
+    _possible_labels: Tuple[Tuple[str, ...]] = tuple()
 
     def batch(
         self,
@@ -82,7 +85,7 @@ class ContentAwareProcessor(Processor):
             assert labels is not None
             if len(labels) <= self.max_element_numbers:
                 # Store the labels for generating the prompt
-                self._possible_labels.append(labels)
+                self._possible_labels = self._possible_labels + tuple(labels.tolist())
         else:
             if conf.labels_for_generation is not None:
                 # If labels_for_generation is provided, use it directly.
@@ -97,6 +100,13 @@ class ContentAwareProcessor(Processor):
                 # The bboxes are set below the sampled labels.
                 labels = random.choice(self._possible_labels)
                 logger.debug(f"Sampled {labels=}")
+
+            # Ensure labels is a numpy array of strings
+            labels = (
+                np.array(labels, dtype=str)
+                if not isinstance(labels, np.ndarray)
+                else labels
+            )
 
             # Prepare empty bboxes for generation.
             bboxes = np.zeros((len(labels), 4))
