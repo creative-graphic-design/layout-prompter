@@ -53,7 +53,7 @@ class ContentAwareProcessor(Processor):
 
     # Store the possible labels from the training data.
     # During testing, randomly sample from this group for generation.
-    _possible_labels: Tuple[Tuple[str, ...]] = tuple()
+    _possible_labels: Tuple[Tuple[str, ...], ...] = tuple()  # type: ignore[assignment]
 
     def batch(
         self,
@@ -85,7 +85,7 @@ class ContentAwareProcessor(Processor):
             assert labels is not None
             if len(labels) <= self.max_element_numbers:
                 # Store the labels for generating the prompt
-                self._possible_labels = self._possible_labels + tuple(labels.tolist())
+                self._possible_labels = self._possible_labels + (tuple(labels.tolist()),)
         else:
             if conf.labels_for_generation is not None:
                 # If labels_for_generation is provided, use it directly.
