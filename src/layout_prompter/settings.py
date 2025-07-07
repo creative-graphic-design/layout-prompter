@@ -1,7 +1,7 @@
 import pathlib
 from typing import List, get_args
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -15,6 +15,10 @@ from layout_prompter.models.serialized_data import PosterClassNames
 class CanvasSize(BaseModel):
     width: int
     height: int
+
+    model_config = ConfigDict(
+        frozen=True,  # for hashable CanvasSize
+    )
 
 
 class TaskSettings(BaseSettings):

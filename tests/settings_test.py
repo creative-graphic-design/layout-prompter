@@ -26,6 +26,26 @@ def test_canvas_size_edge_cases():
     assert canvas_large.height == 20000
 
 
+def test_canvas_size_hashable():
+    """Test that CanvasSize is hashable and can be used in sets/dicts"""
+    canvas1 = CanvasSize(width=100, height=200)
+    canvas2 = CanvasSize(width=100, height=200)
+    canvas3 = CanvasSize(width=200, height=300)
+
+    # Test hashability
+    canvas_set = {canvas1, canvas2, canvas3}
+    assert len(canvas_set) == 2  # canvas1 and canvas2 should be the same
+
+    # Test as dict keys
+    canvas_dict = {canvas1: "first", canvas2: "second", canvas3: "third"}
+    assert len(canvas_dict) == 2
+    assert canvas_dict[canvas1] == "second"  # canvas2 overwrites canvas1
+
+    # Test equality
+    assert canvas1 == canvas2
+    assert canvas1 != canvas3
+
+
 def test_poster_layout_settings():
     """Test PosterLayoutSettings without dataset dependency"""
     settings = PosterLayoutSettings()
