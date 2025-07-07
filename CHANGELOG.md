@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.3.1](https://github.com/creative-graphic-design/layout-prompter/compare/v0.3.0...v0.3.1) - 2025-07-07
+- Update for hashable processors by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/20
+
 ## [v0.3.0](https://github.com/creative-graphic-design/layout-prompter/compare/v0.2.0...v0.3.0) - 2025-07-03
 - feat: add worker/concurrency management for layout processing by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/17
 - feat: update version to 0.3.0 in pyproject.toml and uv.lock by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/19
