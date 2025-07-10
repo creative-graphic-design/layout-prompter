@@ -15,7 +15,6 @@ from loguru import logger
 from pydantic import BaseModel
 
 from layout_prompter.models import (
-    Coordinates,
     LayoutSerializedData,
     ProcessedLayoutData,
 )
@@ -112,13 +111,7 @@ class ContentAwareSerializer(LayoutSerializer):
         content_bboxes = data.discrete_content_bboxes
         assert content_bboxes is not None
 
-        coordinates = []
-        for content_bbox in content_bboxes:
-            left, top, width, height = content_bbox
-            coordinates.append(
-                Coordinates(left=left, top=top, width=width, height=height)
-            )
-        content_constraint = json.dumps([c.model_dump() for c in coordinates])
+        content_constraint = json.dumps([bbox.model_dump() for bbox in content_bboxes])
         return self._convert_to_double_bracket(content_constraint)
 
     def _get_type_constraint(self, data: ProcessedLayoutData) -> str:
@@ -134,15 +127,10 @@ class ContentAwareSerializer(LayoutSerializer):
 
         labels, discrete_gold_bboxes = data.labels, data.discrete_bboxes
 
-        serialized_data_list: List[LayoutSerializedData] = []
-        for class_name, bbox in zip(labels, discrete_gold_bboxes):
-            left, top, width, height = bbox
-            serialized_data_dict = {
-                "class_name": class_name,
-                "coord": {"left": left, "top": top, "width": width, "height": height},
-            }
-            serialized_data = self.schema(**serialized_data_dict)
-            serialized_data_list.append(serialized_data)
+        serialized_data_list = [
+            self.schema(class_name=class_name, bbox=bbox)
+            for class_name, bbox in zip(labels, discrete_gold_bboxes)
+        ]
         return json.dumps([d.model_dump() for d in serialized_data_list])
 
     def invoke(
