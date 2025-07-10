@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.4.1](https://github.com/creative-graphic-design/layout-prompter/compare/v0.4.0...v0.4.1) - 2025-07-10
+- Create LICENSE by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/24
+- docs: update README with installation instructions and badges by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/25
+
 ## [v0.4.0](https://github.com/creative-graphic-design/layout-prompter/compare/v0.3.0...v0.4.0) - 2025-07-07
 - Update for hashable processors by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/20
 - feat: update version to 0.4.0 in pyproject.toml and uv.lock by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/22
