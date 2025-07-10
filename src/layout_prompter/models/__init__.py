@@ -1,4 +1,4 @@
-from .layout_data import LayoutData, ProcessedLayoutData
+from .layout_data import Bbox, LayoutData, ProcessedLayoutData
 from .serialized_data import (
     Coordinates,
     LayoutSerializedData,
@@ -10,6 +10,7 @@ from .serialized_data import (
 )
 
 __all__ = [
+    "Bbox",
     "LayoutData",
     "ProcessedLayoutData",
     "Coordinates",
