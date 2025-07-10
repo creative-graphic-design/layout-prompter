@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple, TypedDict
 
 import numpy as np
 from langchain_core.runnables import Runnable
@@ -37,25 +37,24 @@ class LayoutPrompterRanker(BaseModel, LayoutRanker):
         assert self.lam_ali + self.lam_ove + self.lam_iou == 1.0, self
         return self
 
+    def calculate_metrics(self, data: LayoutSerializedOutputData) -> Tuple[float, ...]:
+        bboxes = np.array([layout.bbox.to_ltrb() for layout in data.layouts])
+        labels = np.array([layout.class_name for layout in data.layouts])
+
+        bboxes, labels = bboxes[None, :, :], labels[None, :]
+        padmsk = np.ones_like(labels, dtype=bool)
+
+        ali_score = compute_alignment(bboxes, padmsk)
+        ove_score = compute_overlap(bboxes, padmsk)
+        return (ali_score, ove_score)
+
     def invoke(
         self,
         input: List[LayoutSerializedOutputData],
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
     ) -> List[LayoutSerializedOutputData]:
-        metrics = []
-        for data in input:
-            bboxes = np.array([layout.bbox.to_ltrb() for layout in data.layouts])
-            labels = np.array([layout.class_name for layout in data.layouts])
-
-            bboxes, labels = bboxes[None, :, :], labels[None, :]
-            padmsk = np.ones_like(labels, dtype=bool)
-
-            ali_score = compute_alignment(bboxes, padmsk)
-            ove_score = compute_overlap(bboxes, padmsk)
-            metrics.append((ali_score, ove_score))
-
-        metrics_arr = np.array(metrics)
+        metrics_arr = np.array([self.calculate_metrics(data) for data in input])
 
         min_vals = np.min(metrics_arr, axis=0, keepdims=True)
         max_vals = np.max(metrics_arr, axis=0, keepdims=True)
