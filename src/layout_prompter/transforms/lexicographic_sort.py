@@ -1,11 +1,11 @@
 import copy
-from typing import Any, Union
+from typing import Any, List, Tuple, Union, cast
 
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
 from loguru import logger
 
-from layout_prompter.models import LayoutData, ProcessedLayoutData
+from layout_prompter.models import LayoutData, NormalizedBbox, ProcessedLayoutData
 
 
 class LexicographicSort(Runnable):
@@ -42,17 +42,26 @@ class LexicographicSort(Runnable):
             else input.orig_labels
         )
 
-        # Extract left and top coordinates from bboxes
-        assert input.bboxes is not None
-        left, top, _, _ = input.bboxes.T
-
-        # Get the indices of the sorted bboxes based on left and top coordinates
-        sorter = zip(*sorted(enumerate(zip(top, left)), key=lambda c: c[1:]))
-        sorted_indices = list(list(sorter)[0])
-
-        # Sort bboxes and labels based on the sorted indices
-        bboxes, labels = bboxes[sorted_indices], labels[sorted_indices]
-        gold_bboxes = gold_bboxes[sorted_indices]
+        # Sort bboxes and labels lexicographically by their top-left corner
+        combined = list(
+            zip(
+                bboxes,  # 0 is the index for bboxes
+                gold_bboxes,  # 1
+                labels,  # 2
+            )
+        )
+        sorted_combined = sorted(
+            combined,
+            key=lambda x: (
+                x[0].left,  # 0 is the index for bboxes as you can see above
+                x[0].top,
+            ),
+        )
+        ## Unpack the sorted combined list
+        bboxes, gold_bboxes, labels = cast(
+            Tuple[List[NormalizedBbox], List[NormalizedBbox], List[str]],
+            zip(*sorted_combined),
+        )
 
         # Return the processed layout data
         processed_data = ProcessedLayoutData(
