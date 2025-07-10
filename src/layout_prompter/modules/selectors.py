@@ -1,5 +1,6 @@
+import abc
 import random
-from typing import List, Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -8,10 +9,9 @@ from langchain_core.example_selectors.base import BaseExampleSelector
 from loguru import logger
 from pydantic import BaseModel, model_validator
 from tqdm.auto import tqdm
-from typing_extensions import Self
+from typing_extensions import Self, override
 
-from layout_prompter.models import ProcessedLayoutData
-from layout_prompter.settings import CanvasSize
+from layout_prompter.models import Bbox, CanvasSize, ProcessedLayoutData
 
 
 class LayoutSelectorOutput(BaseModel):
@@ -20,7 +20,6 @@ class LayoutSelectorOutput(BaseModel):
 
 class LayoutSelector(BaseExampleSelector, BaseModel):
     examples: List[ProcessedLayoutData]
-    canvas_size: CanvasSize
     num_prompt: int = 10
     candidate_size: Optional[int] = None
     is_shuffle: bool = True
@@ -38,11 +37,14 @@ class LayoutSelector(BaseExampleSelector, BaseModel):
 
         return self
 
+    @override
+    @abc.abstractmethod
     def select_examples(  # type: ignore[override]
         self, input_variables: ProcessedLayoutData
     ) -> LayoutSelectorOutput:
         raise NotImplementedError
 
+    @override
     def add_example(  # type: ignore[override]
         self,
         example: ProcessedLayoutData,
@@ -50,11 +52,14 @@ class LayoutSelector(BaseExampleSelector, BaseModel):
         self.examples.append(example)
 
     def _is_filter(self, data: ProcessedLayoutData) -> bool:
+        """Filtering function to exclude data with bboxes that have width or height of 0."""
         discrete_gold_bboxes = data.discrete_gold_bboxes
         assert discrete_gold_bboxes is not None
 
-        num = (discrete_gold_bboxes[:, 2:] == 0).sum().item()
-        return bool(num)
+        num_invalid_bboxes = sum(
+            [(bbox.width == 0) + (bbox.height == 0) for bbox in discrete_gold_bboxes]
+        )
+        return num_invalid_bboxes > 0
 
     def _retrieve_examples(
         self, scores: List[Tuple[int, float]], return_indices: bool = False
@@ -93,23 +98,24 @@ def calculate_iou(
 class ContentAwareSelector(LayoutSelector):
     return_saliency_maps: bool = False
 
-    def _to_binary_image(self, content_bboxes: np.ndarray) -> np.ndarray:
+    def _to_binary_image(
+        self, content_bboxes: Sequence[Bbox], canvas_size: CanvasSize
+    ) -> np.ndarray:
         binary_image = np.zeros(
-            (self.canvas_size.height, self.canvas_size.width),
+            (canvas_size.height, canvas_size.width),
             dtype=np.uint8,
         )
-        content_bboxes = content_bboxes.tolist()
         for content_bbox in content_bboxes:
-            left, top, width, height = content_bbox
             cv2.rectangle(
                 img=binary_image,
-                pt1=(left, top),
-                pt2=(left + width, top + height),
+                pt1=(content_bbox.left, content_bbox.top),
+                pt2=(content_bbox.right, content_bbox.bottom),
                 color=(255,),
                 thickness=-1,
             )
         return binary_image
 
+    @override
     def select_examples(  # type: ignore[override]
         self,
         input_variables: ProcessedLayoutData,
@@ -121,7 +127,9 @@ class ContentAwareSelector(LayoutSelector):
         query = input_variables
         query_content_bboxes = query.discrete_content_bboxes
         assert query_content_bboxes is not None
-        query_saliency_map = self._to_binary_image(query_content_bboxes)
+        query_saliency_map = self._to_binary_image(
+            query_content_bboxes, canvas_size=query.canvas_size
+        )
 
         scores: List[Tuple[int, float]] = []
         candidate_saliency_maps: List[np.ndarray] = []
@@ -133,7 +141,9 @@ class ContentAwareSelector(LayoutSelector):
         for idx, candidate in enumerate(it):
             candidate_content_bboxes = candidate.discrete_content_bboxes
             assert candidate_content_bboxes is not None
-            candidate_saliency_map = self._to_binary_image(candidate_content_bboxes)
+            candidate_saliency_map = self._to_binary_image(
+                candidate_content_bboxes, canvas_size=candidate.canvas_size
+            )
             candidate_saliency_maps.append(candidate_saliency_map)
 
             iou = calculate_iou(
