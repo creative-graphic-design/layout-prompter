@@ -1,11 +1,11 @@
 import copy
-from typing import Any, Union
+from typing import Any, List, Tuple, Union, cast
 
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
 from loguru import logger
 
-from layout_prompter.models import LayoutData, ProcessedLayoutData
+from layout_prompter.models import LayoutData, NormalizedBbox, ProcessedLayoutData
 
 
 class LabelDictSort(Runnable):
@@ -42,15 +42,23 @@ class LabelDictSort(Runnable):
             else input.orig_labels
         )
 
-        # Sort labels with their indices
-        labels_with_indices = [(i, label) for i, label in enumerate(labels)]
-        labels_with_indices = sorted(labels_with_indices, key=lambda x: x[1])
-        sorted_indices = [li[0] for li in labels_with_indices]
-
-        # Sort bboxes and labels based on the sorted indices
-        bboxes = bboxes[sorted_indices]
-        labels = labels[sorted_indices]
-        gold_bboxes = gold_bboxes[sorted_indices]
+        # Sort bboxes and labels based on the label dictionary
+        combined = list(
+            zip(
+                bboxes,  # 0
+                gold_bboxes,  # 1
+                labels,  # 2 is the index for labels
+            )
+        )
+        sorted_combined = sorted(
+            combined,
+            key=lambda x: x[2],  # 2 is the index for labels as you can see above
+        )
+        ## Unpack the sorted combined list
+        bboxes, gold_bboxes, labels = cast(
+            Tuple[List[NormalizedBbox], List[NormalizedBbox], List[str]],
+            zip(*sorted_combined),
+        )
 
         processed_data = ProcessedLayoutData(
             idx=input.idx,
