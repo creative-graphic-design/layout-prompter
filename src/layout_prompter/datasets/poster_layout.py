@@ -22,7 +22,7 @@ def _filter_empty_content_bboxes(example):
     return example["content_bboxes"] is not None
 
 
-def load_raw_poste_layout(
+def load_raw_poster_layout(
     dataset_name: str = "creative-graphic-design/PKU-PosterLayout",
 ) -> ds.DatasetDict:
     # Load the PosterLayout dataset
@@ -43,7 +43,7 @@ def load_poster_layout(
     settings = PosterLayoutSettings()
 
     # Load the PosterLayout dataset
-    dataset = load_raw_poste_layout(dataset_name)
+    dataset = load_raw_poster_layout(dataset_name)
 
     # Apply filtering to remove invalid data
     dataset = dataset.filter(
