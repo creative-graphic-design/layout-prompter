@@ -1,16 +1,85 @@
+import math
 from functools import cached_property
-from typing import List, Optional, Tuple
+from typing import Generic, Optional, Sequence, Tuple, TypeVar
 
-import pydantic_numpy.typing as pnd
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing_extensions import Self
 
-from layout_prompter.settings import CanvasSize
 from layout_prompter.typehints import PilImage
 from layout_prompter.utils import base64_to_pil
 
+CoordinateType = TypeVar("CoordinateType", int, float)
 
-class Bbox(BaseModel):
+
+class CanvasSize(BaseModel):
+    width: int
+    height: int
+
+    model_config = ConfigDict(
+        frozen=True,  # for hashable CanvasSize
+    )
+
+
+class BaseBbox(BaseModel, Generic[CoordinateType]):
+    """Generic base class for bounding boxes."""
+
+    left: CoordinateType
+    top: CoordinateType
+    width: CoordinateType
+    height: CoordinateType
+
+    model_config = ConfigDict(
+        frozen=True,
+        strict=True,  # to ensure all fields are required
+        extra="forbid",  # to prevent additional fields
+        revalidate_instances="always",  # to revalidate on every instance creation
+    )
+
+    @property
+    def right(self) -> CoordinateType:
+        """Calculate the right coordinate of the bounding box."""
+        return self.left + self.width
+
+    @property
+    def bottom(self) -> CoordinateType:
+        """Calculate the bottom coordinate of the bounding box."""
+        return self.top + self.height
+
+    def to_ltwh(
+        self,
+    ) -> Tuple[CoordinateType, CoordinateType, CoordinateType, CoordinateType]:
+        """Convert bounding box to left, top, width, height format."""
+        return (self.left, self.top, self.width, self.height)
+
+    def to_ltrb(
+        self,
+    ) -> Tuple[CoordinateType, CoordinateType, CoordinateType, CoordinateType]:
+        """Convert bounding box to left, top, right, bottom format."""
+        return (self.left, self.top, self.right, self.bottom)
+
+
+class Bbox(BaseBbox[int]):
+    """Bounding box in absolute pixel coordinates."""
+
+    left: int = Field(
+        ge=0,
+        description="Left coordinate of the bounding box",
+    )
+    top: int = Field(
+        ge=0,
+        description="Top coordinate of the bounding box",
+    )
+    width: int = Field(
+        ge=0,
+        description="Width of the bounding box",
+    )
+    height: int = Field(
+        ge=0,
+        description="Height of the bounding box",
+    )
+
+
+class NormalizedBbox(BaseBbox[float]):
     left: float = Field(
         ge=0.0,
         le=1.0,
@@ -32,15 +101,15 @@ class Bbox(BaseModel):
         description="Height of the normalized bounding box",
     )
 
-    @property
-    def right(self) -> float:
-        """Calculate the right coordinate of the normalized bounding box."""
-        return self.left + self.width
+    def discretize(self, canvas_size: CanvasSize) -> Bbox:
+        """Convert normalized bounding box to absolute pixel coordinates."""
 
-    @property
-    def bottom(self) -> float:
-        """Calculate the bottom coordinate of the normalized bounding box."""
-        return self.top + self.height
+        return Bbox(
+            left=math.floor(self.left * canvas_size.width),
+            top=math.floor(self.top * canvas_size.height),
+            width=math.floor(self.width * canvas_size.width),
+            height=math.floor(self.height * canvas_size.height),
+        )
 
 
 class LayoutData(BaseModel):
@@ -49,17 +118,24 @@ class LayoutData(BaseModel):
         description="Index of the layout data",
     )
 
-    bboxes: Optional[List[Bbox]] = Field(
+    bboxes: Optional[Sequence[NormalizedBbox]] = Field(
         description="List of bounding boxes in normalized coordinates"
     )
-    labels: Optional[List[str]] = Field(
+    labels: Optional[Sequence[str]] = Field(
         description="List of labels for the bounding boxes",
     )
 
     canvas_size: CanvasSize
 
     encoded_image: Optional[str]
-    content_bboxes: Optional[List[Bbox]]
+    content_bboxes: Optional[Sequence[NormalizedBbox]]
+
+    model_config = ConfigDict(
+        frozen=True,
+        strict=True,  # to ensure all fields are required
+        extra="forbid",  # to prevent additional fields
+        revalidate_instances="always",  # to revalidate on every instance creation
+    )
 
     @model_validator(mode="after")
     def validate_bboxes_and_labels(self) -> Self:
@@ -71,21 +147,35 @@ class LayoutData(BaseModel):
 
     @cached_property
     def content_image(self) -> PilImage:
+        """Get the content image from the encoded image."""
         assert self.encoded_image is not None, (
             "Encoded image must be provided to get content image."
         )
         return base64_to_pil(self.encoded_image)
 
     def is_content_aware(self) -> bool:
+        """Check if the layout data is content-aware."""
         return self.encoded_image is not None or self.content_bboxes is not None
 
 
 class ProcessedLayoutData(LayoutData):
-    gold_bboxes: pnd.Np2DArray
+    gold_bboxes: Sequence[NormalizedBbox] = Field(
+        description="List of ground truth bounding boxes in normalized coordinates"
+    )
 
-    orig_bboxes: pnd.Np2DArray
-    orig_labels: pnd.NpNDArray
+    orig_bboxes: Sequence[NormalizedBbox] = Field(
+        description="List of original bounding boxes in normalized coordinates"
+    )
+    orig_labels: Sequence[str] = Field(
+        description="List of original labels for the bounding boxes",
+    )
 
-    discrete_bboxes: Optional[List[Tuple[int, int, int, int]]]
-    discrete_gold_bboxes: Optional[List[Tuple[int, int, int, int]]]
-    discrete_content_bboxes: Optional[List[Tuple[int, int, int, int]]]
+    discrete_bboxes: Optional[Sequence[Bbox]] = Field(
+        description="List of discretized bounding boxes in normalized coordinates"
+    )
+    discrete_gold_bboxes: Optional[Sequence[Bbox]] = Field(
+        description="List of discretized ground truth bounding boxes in normalized coordinates"
+    )
+    discrete_content_bboxes: Optional[Sequence[Bbox]] = Field(
+        description="List of discretized content bounding boxes in normalized coordinates"
+    )

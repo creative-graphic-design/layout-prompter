@@ -1,17 +1,8 @@
-from typing import Any, List, Literal, Tuple
+from typing import Any, List, Literal
 
 from pydantic import BaseModel
 
-
-class Coordinates(BaseModel):
-    left: int
-    top: int
-    width: int
-    height: int
-
-    def to_tuple(self) -> Tuple[int, int, int, int]:
-        return (self.left, self.top, self.width, self.height)
-
+from .layout_data import Bbox
 
 PosterClassNames = Literal[
     "text",
@@ -52,7 +43,7 @@ class LayoutSerializedData(BaseModel):
     """Protocol for objects that have serialized layout data."""
 
     class_name: Any
-    coord: Coordinates
+    bbox: Bbox
 
 
 class LayoutSerializedOutputData(BaseModel):
