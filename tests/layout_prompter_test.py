@@ -2,6 +2,8 @@ from typing import Dict, List, Type, cast
 
 import pytest
 from langchain.chat_models import init_chat_model
+from langchain.smith.evaluation.progress import ProgressBarCallback
+
 from layout_prompter import LayoutPrompter
 from layout_prompter.models import (
     LayoutData,
@@ -20,6 +22,8 @@ from layout_prompter.modules import (
 )
 from layout_prompter.preprocessors import ContentAwareProcessor
 from layout_prompter.settings import PosterLayoutSettings, Rico25Settings, TaskSettings
+from layout_prompter.typehints import PilImage
+from layout_prompter.utils import get_num_workers
 from layout_prompter.utils.testing import LayoutPrompterTestCase
 from layout_prompter.visualizers import ContentAwareVisualizer
 
@@ -89,10 +93,18 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
         tst_dataset = layout_dataset["test"]
 
         # Define the content-aware processor and process the data for candidates
-        processor = ContentAwareProcessor()
+        processor = ContentAwareProcessor(target_canvas_size=settings.canvas_size)
+
+        # Process the training dataset to get candidate examples
         examples = cast(
             List[ProcessedLayoutData],
-            processor.invoke(input=tng_dataset),
+            processor.batch(
+                inputs=tng_dataset,
+                config={
+                    "max_concurrency": get_num_workers(max_concurrency=4),
+                    "callbacks": [ProgressBarCallback(total=len(tng_dataset))],
+                },
+            ),
         )
 
         # Select a random test example
@@ -109,7 +121,6 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
         layout_prompter = LayoutPrompter(
             selector=ContentAwareSelector(
                 num_prompt=num_prompt,
-                canvas_size=settings.canvas_size,
                 examples=examples,
             ),
             serializer=ContentAwareSerializer(
@@ -124,34 +135,38 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
             schema=output_schema,
         )
 
-        # Invoke the LayoutPrompter
-        layout_prompter_config = {
-            "num_return": num_return,
-        }
-        outputs = layout_prompter.invoke(
-            input=processed_test_data, config={"configurable": layout_prompter_config}
+        # Invoke the LayoutPrompter to generate layouts
+        output = layout_prompter.invoke(
+            input=processed_test_data,
+            config={
+                "configurable": {"num_return": num_return},
+            },
         )
 
         # Define the visualizer
         visualizer = ContentAwareVisualizer(
             canvas_size=settings.canvas_size, labels=settings.labels
         )
-        visualizer_config = {
-            "resize_ratio": 2.0,
-            "bg_image": test_data.content_image,
-            "content_bboxes": processed_test_data.discrete_content_bboxes,
-        }
+        visualizations = cast(
+            List[PilImage],
+            visualizer.batch(
+                inputs=output.ranked_outputs,
+                config={
+                    "configurable": {
+                        "resize_ratio": 2.0,
+                        "bg_image": test_data.content_image.copy(),
+                        "content_bboxes": processed_test_data.discrete_content_bboxes,
+                    }
+                },
+            ),
+        )
 
         # Create the save directory
         save_dir = self.PROJECT_ROOT / "generated" / "content_aware"
         save_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save the generated layout-rendering images
-        for i, output in enumerate(outputs):
-            image = visualizer.invoke(
-                output,
-                config={"configurable": visualizer_config},
-            )
+        for i, image in enumerate(visualizations):
+            # Save the generated layout-rendering images
             image.save(save_dir / f"{idx=},{i=}.png")
 
 

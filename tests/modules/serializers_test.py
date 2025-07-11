@@ -54,7 +54,7 @@ class TestContentAwareSerializer(LayoutPrompterTestCase):
         processed_test_data = cast(
             ProcessedLayoutData, processor.invoke(input=tst_data)
         )
-        candidates = selector.select_examples(processed_test_data)
+        selector_output = selector.select_examples(processed_test_data)
 
         serializer = ContentAwareSerializer(
             layout_domain=settings.domain,
@@ -62,7 +62,8 @@ class TestContentAwareSerializer(LayoutPrompterTestCase):
         )
         prompt = serializer.invoke(
             input=LayoutSerializerInput(
-                query=processed_test_data, candidates=candidates
+                query=processed_test_data,
+                candidates=selector_output.selected_examples,
             )
         )
         for message in prompt.to_messages():

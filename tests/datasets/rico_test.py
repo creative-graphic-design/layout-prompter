@@ -1,6 +1,6 @@
-import datasets as ds
-
 from layout_prompter.datasets import load_rico
+
+import datasets as ds
 
 
 def test_load_rico():

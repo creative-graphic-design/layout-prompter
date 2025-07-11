@@ -1,9 +1,10 @@
 from typing import get_args
 
-from layout_prompter.models.serialized_data import PosterClassNames
-from layout_prompter.settings import CanvasSize, PosterLayoutSettings, TaskSettings
-
 import datasets as ds
+
+from layout_prompter.models import CanvasSize
+from layout_prompter.models.serialized_data import PosterClassNames
+from layout_prompter.settings import PosterLayoutSettings, TaskSettings
 
 
 def test_canvas_size():

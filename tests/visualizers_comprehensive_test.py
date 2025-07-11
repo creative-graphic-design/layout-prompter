@@ -1,20 +1,21 @@
-import numpy as np
 import pytest
+from PIL import Image
+
 from layout_prompter.models import (
-    Coordinates,
+    CanvasSize,
+    Bbox,
+    NormalizedBbox,
     LayoutSerializedData,
     LayoutSerializedOutputData,
     PosterLayoutSerializedOutputData,
     ProcessedLayoutData,
 )
-from layout_prompter.settings import CanvasSize
 from layout_prompter.visualizers import (
     ContentAgnosticVisualizer,
     ContentAgnosticVisualizerConfig,
     ContentAwareVisualizer,
     ContentAwareVisualizerConfig,
 )
-from PIL import Image
 
 
 class TestVisualizerBase:
@@ -30,17 +31,14 @@ class TestVisualizerBase:
     def processed_layout_data(self) -> ProcessedLayoutData:
         return ProcessedLayoutData(
             idx=0,
-            bboxes=np.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]),
-            labels=np.array(["text", "logo"]),
-            gold_bboxes=np.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]),
-            orig_bboxes=np.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]),
-            orig_labels=np.array(["text", "logo"]),
-            discrete_bboxes=np.array(
-                [[10, 30, 30, 60], [50, 90, 70, 120]], dtype=np.int32
-            ),
-            discrete_gold_bboxes=np.array(
-                [[10, 30, 30, 60], [50, 90, 70, 120]], dtype=np.int32
-            ),
+            bboxes=[NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4), NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8)],
+            labels=["text", "logo"],
+            gold_bboxes=[NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4), NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8)],
+            orig_bboxes=[NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4), NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8)],
+            orig_labels=["text", "logo"],
+            orig_canvas_size=CanvasSize(width=100, height=150),
+            discrete_bboxes=[Bbox(left=10, top=30, width=30, height=60), Bbox(left=50, top=90, width=70, height=120)],
+            discrete_gold_bboxes=[Bbox(left=10, top=30, width=30, height=60), Bbox(left=50, top=90, width=70, height=120)],
             discrete_content_bboxes=None,
             canvas_size=CanvasSize(width=100, height=150),
             encoded_image=None,
@@ -53,11 +51,11 @@ class TestVisualizerBase:
             layouts=[
                 LayoutSerializedData(
                     class_name="text",
-                    coord=Coordinates(left=10, top=30, width=30, height=60),
+                    bbox=Bbox(left=10, top=30, width=30, height=60),
                 ),
                 LayoutSerializedData(
                     class_name="logo",
-                    coord=Coordinates(left=50, top=90, width=70, height=120),
+                    bbox=Bbox(left=50, top=90, width=70, height=120),
                 ),
             ]
         )
@@ -87,16 +85,16 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
         # Check first layout
         layout1 = result.layouts[0]
         assert layout1.class_name == "text"
-        assert layout1.coord.left == 10
-        assert layout1.coord.top == 30
-        assert layout1.coord.width == 30
-        assert layout1.coord.height == 60
+        assert layout1.bbox.left == 10
+        assert layout1.bbox.top == 30
+        assert layout1.bbox.width == 30
+        assert layout1.bbox.height == 60
 
         # Check second layout
         layout2 = result.layouts[1]
         assert layout2.class_name == "logo"
-        assert layout2.coord.left == 50
-        assert layout2.coord.top == 90
+        assert layout2.bbox.left == 50
+        assert layout2.bbox.top == 90
 
     def test_convert_to_serialized_output_data_missing_labels(
         self, visualizer: ContentAgnosticVisualizer
@@ -104,13 +102,14 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
         # Test with None labels - should raise assertion error
         processed_data = ProcessedLayoutData(
             idx=0,
-            bboxes=np.array([[0.1, 0.2, 0.3, 0.4]]),
+            bboxes=[NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4)],
             labels=None,  # This should cause assertion error
-            gold_bboxes=np.array([[0.1, 0.2, 0.3, 0.4]]),
-            orig_bboxes=np.array([[0.1, 0.2, 0.3, 0.4]]),
-            orig_labels=np.array(["text"]),
-            discrete_bboxes=np.array([[10, 30, 30, 60]], dtype=np.int32),
-            discrete_gold_bboxes=np.array([[10, 30, 30, 60]], dtype=np.int32),
+            gold_bboxes=[NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4)],
+            orig_bboxes=[NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4)],
+            orig_labels=["text"],
+            orig_canvas_size=CanvasSize(width=100, height=150),
+            discrete_bboxes=[Bbox(left=10, top=30, width=30, height=60)],
+            discrete_gold_bboxes=[Bbox(left=10, top=30, width=30, height=60)],
             discrete_content_bboxes=None,
             canvas_size=CanvasSize(width=100, height=150),
             encoded_image=None,
@@ -126,13 +125,14 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
         # Test with None discrete_bboxes - should raise assertion error
         processed_data = ProcessedLayoutData(
             idx=0,
-            bboxes=np.array([[0.1, 0.2, 0.3, 0.4]]),
-            labels=np.array(["text"]),
-            gold_bboxes=np.array([[0.1, 0.2, 0.3, 0.4]]),
-            orig_bboxes=np.array([[0.1, 0.2, 0.3, 0.4]]),
-            orig_labels=np.array(["text"]),
+            bboxes=[NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4)],
+            labels=["text"],
+            gold_bboxes=[NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4)],
+            orig_bboxes=[NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4)],
+            orig_labels=["text"],
+            orig_canvas_size=CanvasSize(width=100, height=150),
             discrete_bboxes=None,  # This should cause assertion error
-            discrete_gold_bboxes=np.array([[10, 30, 30, 60]], dtype=np.int32),
+            discrete_gold_bboxes=[Bbox(left=10, top=30, width=30, height=60)],
             discrete_content_bboxes=None,
             canvas_size=CanvasSize(width=100, height=150),
             encoded_image=None,
@@ -146,15 +146,15 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
         layouts = [
             LayoutSerializedData(
                 class_name="small",
-                coord=Coordinates(left=0, top=0, width=10, height=10),
+                bbox=Bbox(left=0, top=0, width=10, height=10),
             ),  # area = 100
             LayoutSerializedData(
                 class_name="large",
-                coord=Coordinates(left=0, top=0, width=20, height=30),
+                bbox=Bbox(left=0, top=0, width=20, height=30),
             ),  # area = 600
             LayoutSerializedData(
                 class_name="medium",
-                coord=Coordinates(left=0, top=0, width=15, height=20),
+                bbox=Bbox(left=0, top=0, width=15, height=20),
             ),  # area = 300
         ]
 
@@ -174,11 +174,11 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
         layouts = [
             LayoutSerializedData(
                 class_name="first",
-                coord=Coordinates(left=0, top=0, width=10, height=10),
+                bbox=Bbox(left=0, top=0, width=10, height=10),
             ),  # area = 100
             LayoutSerializedData(
                 class_name="second",
-                coord=Coordinates(left=0, top=0, width=5, height=20),
+                bbox=Bbox(left=0, top=0, width=5, height=20),
             ),  # area = 100
         ]
 
@@ -193,7 +193,7 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
         image = Image.new("RGB", (200, 200), (255, 255, 255))
 
         layout = LayoutSerializedData(
-            class_name="text", coord=Coordinates(left=10, top=20, width=50, height=30)
+            class_name="text", bbox=Bbox(left=10, top=20, width=50, height=30)
         )
 
         result_image = visualizer.draw_layout_bboxes(image, layout)
@@ -210,7 +210,7 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
         image = Image.new("RGB", (200, 200), (255, 255, 255))
 
         layout = LayoutSerializedData(
-            class_name="text", coord=Coordinates(left=10, top=20, width=50, height=30)
+            class_name="text", bbox=Bbox(left=10, top=20, width=50, height=30)
         )
 
         result_image = visualizer.draw_layout_bboxes(image, layout, resize_ratio=2.0)
@@ -225,7 +225,7 @@ class TestContentAgnosticVisualizer(TestVisualizerBase):
 
         layout = LayoutSerializedData(
             class_name="unknown_class",  # Not in labels list
-            coord=Coordinates(left=10, top=20, width=50, height=30),
+            bbox=Bbox(left=10, top=20, width=50, height=30),
         )
 
         # Should raise ValueError when class not found in labels
@@ -306,8 +306,8 @@ class TestContentAwareVisualizer(TestVisualizerBase):
         return Image.new("RGB", (100, 150), (128, 128, 128))
 
     @pytest.fixture
-    def content_bboxes(self) -> np.ndarray:
-        return np.array([[10, 20, 30, 40], [60, 80, 25, 35]])
+    def content_bboxes(self) -> list[Bbox]:
+        return [Bbox(left=10, top=20, width=30, height=40), Bbox(left=60, top=80, width=25, height=35)]
 
     @pytest.fixture
     def visualizer(
@@ -323,7 +323,7 @@ class TestContentAwareVisualizer(TestVisualizerBase):
         self,
         visualizer: ContentAwareVisualizer,
         bg_image: Image.Image,
-        content_bboxes: np.ndarray,
+        content_bboxes: list[Bbox],
     ):
         result_image = visualizer.draw_content_bboxes(bg_image, content_bboxes)
 
@@ -336,7 +336,7 @@ class TestContentAwareVisualizer(TestVisualizerBase):
         self,
         visualizer: ContentAwareVisualizer,
         bg_image: Image.Image,
-        content_bboxes: np.ndarray,
+        content_bboxes: list[Bbox],
     ):
         result_image = visualizer.draw_content_bboxes(
             bg_image, content_bboxes, resize_ratio=1.5
@@ -349,7 +349,7 @@ class TestContentAwareVisualizer(TestVisualizerBase):
         self,
         visualizer: ContentAwareVisualizer,
         bg_image: Image.Image,
-        content_bboxes: np.ndarray,
+        content_bboxes: list[Bbox],
     ):
         result_image = visualizer.draw_content_bboxes(
             bg_image, content_bboxes, font_color=(255, 0, 0)
@@ -360,7 +360,7 @@ class TestContentAwareVisualizer(TestVisualizerBase):
     def test_draw_content_bboxes_empty_array(
         self, visualizer: ContentAwareVisualizer, bg_image: Image.Image
     ):
-        empty_bboxes = np.empty((0, 4))
+        empty_bboxes = []
 
         result_image = visualizer.draw_content_bboxes(bg_image, empty_bboxes)
 
@@ -372,7 +372,7 @@ class TestContentAwareVisualizer(TestVisualizerBase):
         visualizer: ContentAwareVisualizer,
         processed_layout_data: ProcessedLayoutData,
         bg_image: Image.Image,
-        content_bboxes: np.ndarray,
+        content_bboxes: list[Bbox],
     ):
         config = {
             "configurable": ContentAwareVisualizerConfig(
