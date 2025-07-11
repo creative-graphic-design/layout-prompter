@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Tuple, TypedDict
+from typing import Any, List, Optional, Tuple
 
 import numpy as np
 from langchain_core.runnables import Runnable
@@ -38,6 +38,8 @@ class LayoutPrompterRanker(BaseModel, LayoutRanker):
         return self
 
     def calculate_metrics(self, data: LayoutSerializedOutputData) -> Tuple[float, ...]:
+        if not data.layouts:
+            raise ValueError("Cannot calculate metrics for empty layouts")
         bboxes = np.array([layout.bbox.to_ltrb() for layout in data.layouts])
         labels = np.array([layout.class_name for layout in data.layouts])
 
