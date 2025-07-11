@@ -45,6 +45,11 @@ class DiscretizeBboxes(RunnableSerializable):
             if isinstance(input, LayoutData)
             else input.orig_labels
         )
+        orig_canvas_size = (
+            input.orig_canvas_size
+            if isinstance(input, ProcessedLayoutData)
+            else input.canvas_size
+        )
 
         discrete_bboxes = [
             bbox.discretize(canvas_size=self.target_canvas_size) for bbox in bboxes
@@ -77,6 +82,7 @@ class DiscretizeBboxes(RunnableSerializable):
             discrete_content_bboxes=discrete_content_bboxes,
             orig_bboxes=orig_bboxes,
             orig_labels=orig_labels,
+            orig_canvas_size=orig_canvas_size,
             canvas_size=self.target_canvas_size,
         )
         logger.trace(f"{processed_data=}")
