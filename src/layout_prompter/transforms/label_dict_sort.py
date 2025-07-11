@@ -41,6 +41,11 @@ class LabelDictSort(Runnable):
             if isinstance(input, LayoutData)
             else input.orig_labels
         )
+        orig_canvas_size = (
+            input.orig_canvas_size
+            if isinstance(input, ProcessedLayoutData)
+            else canvas_size
+        )
 
         # Sort bboxes and labels based on the label dictionary
         combined = list(
@@ -69,6 +74,7 @@ class LabelDictSort(Runnable):
             gold_bboxes=gold_bboxes,
             orig_bboxes=orig_bboxes,
             orig_labels=orig_labels,
+            orig_canvas_size=orig_canvas_size,
             discrete_bboxes=None,
             discrete_gold_bboxes=None,
             discrete_content_bboxes=None,
