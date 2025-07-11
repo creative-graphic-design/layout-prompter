@@ -169,6 +169,9 @@ class ProcessedLayoutData(LayoutData):
     orig_labels: Sequence[str] = Field(
         description="List of original labels for the bounding boxes",
     )
+    orig_canvas_size: CanvasSize = Field(
+        description="Original canvas size of the layout data"
+    )
 
     discrete_bboxes: Optional[Sequence[Bbox]] = Field(
         description="List of discretized bounding boxes in normalized coordinates"
