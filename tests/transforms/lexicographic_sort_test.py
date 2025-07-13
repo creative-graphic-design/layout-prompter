@@ -1,5 +1,12 @@
 import pytest
-from layout_prompter.models import LayoutData, ProcessedLayoutData, NormalizedBbox, Bbox, CanvasSize
+
+from layout_prompter.models import (
+    Bbox,
+    CanvasSize,
+    LayoutData,
+    NormalizedBbox,
+    ProcessedLayoutData,
+)
 from layout_prompter.transforms.lexicographic_sort import LexicographicSort
 
 
@@ -66,7 +73,7 @@ class TestLexicographicSort:
 
         # Expected sort order by (left, top) as per implementation:
         # bbox3: left=0.0, top=0.5 (first)
-        # bbox1: left=0.1, top=0.5 (second) 
+        # bbox1: left=0.1, top=0.5 (second)
         # bbox2: left=0.2, top=0.2 (third)
         expected_bboxes = (
             NormalizedBbox(left=0.0, top=0.5, width=0.2, height=0.2),  # text3
@@ -116,7 +123,9 @@ class TestLexicographicSort:
 
         assert isinstance(result, ProcessedLayoutData)
         assert result.labels == ("text",)
-        assert result.bboxes == (NormalizedBbox(left=0.1, top=0.2, width=0.2, height=0.2),)
+        assert result.bboxes == (
+            NormalizedBbox(left=0.1, top=0.2, width=0.2, height=0.2),
+        )
 
     def test_invoke_same_top_different_left(self, sorter: LexicographicSort):
         """Test sorting with same top coordinate but different left coordinates."""
@@ -180,7 +189,9 @@ class TestLexicographicSort:
         layout_data = LayoutData(
             idx=5,
             bboxes=[
-                NormalizedBbox(left=0.5, top=0.5, width=0.5, height=0.5),  # bottom-right
+                NormalizedBbox(
+                    left=0.5, top=0.5, width=0.5, height=0.5
+                ),  # bottom-right
                 NormalizedBbox(left=0.0, top=0.0, width=0.5, height=0.5),  # top-left
                 NormalizedBbox(left=0.0, top=0.5, width=0.5, height=0.5),  # bottom-left
                 NormalizedBbox(left=0.5, top=0.0, width=0.5, height=0.5),  # top-right
@@ -200,9 +211,7 @@ class TestLexicographicSort:
             NormalizedBbox(left=0.5, top=0.0, width=0.5, height=0.5),  # top-right
             NormalizedBbox(left=0.5, top=0.5, width=0.5, height=0.5),  # bottom-right
         )
-        expected_labels = (
-            "top-left", "bottom-left", "top-right", "bottom-right"
-        )
+        expected_labels = ("top-left", "bottom-left", "top-right", "bottom-right")
 
         assert result.bboxes == expected_bboxes
         assert result.labels == expected_labels

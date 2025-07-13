@@ -2,11 +2,11 @@ import pytest
 from PIL import Image
 
 from layout_prompter.models import (
-    CanvasSize,
     Bbox,
-    NormalizedBbox,
+    CanvasSize,
     LayoutSerializedData,
     LayoutSerializedOutputData,
+    NormalizedBbox,
     PosterLayoutSerializedOutputData,
     ProcessedLayoutData,
 )
@@ -31,14 +31,29 @@ class TestVisualizerBase:
     def processed_layout_data(self) -> ProcessedLayoutData:
         return ProcessedLayoutData(
             idx=0,
-            bboxes=[NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4), NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8)],
+            bboxes=[
+                NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),
+                NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8),
+            ],
             labels=["text", "logo"],
-            gold_bboxes=[NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4), NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8)],
-            orig_bboxes=[NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4), NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8)],
+            gold_bboxes=[
+                NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),
+                NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8),
+            ],
+            orig_bboxes=[
+                NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),
+                NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8),
+            ],
             orig_labels=["text", "logo"],
             orig_canvas_size=CanvasSize(width=100, height=150),
-            discrete_bboxes=[Bbox(left=10, top=30, width=30, height=60), Bbox(left=50, top=90, width=70, height=120)],
-            discrete_gold_bboxes=[Bbox(left=10, top=30, width=30, height=60), Bbox(left=50, top=90, width=70, height=120)],
+            discrete_bboxes=[
+                Bbox(left=10, top=30, width=30, height=60),
+                Bbox(left=50, top=90, width=70, height=120),
+            ],
+            discrete_gold_bboxes=[
+                Bbox(left=10, top=30, width=30, height=60),
+                Bbox(left=50, top=90, width=70, height=120),
+            ],
             discrete_content_bboxes=None,
             canvas_size=CanvasSize(width=100, height=150),
             encoded_image=None,
@@ -307,7 +322,10 @@ class TestContentAwareVisualizer(TestVisualizerBase):
 
     @pytest.fixture
     def content_bboxes(self) -> list[Bbox]:
-        return [Bbox(left=10, top=20, width=30, height=40), Bbox(left=60, top=80, width=25, height=35)]
+        return [
+            Bbox(left=10, top=20, width=30, height=40),
+            Bbox(left=60, top=80, width=25, height=35),
+        ]
 
     @pytest.fixture
     def visualizer(
@@ -361,8 +379,9 @@ class TestContentAwareVisualizer(TestVisualizerBase):
         self, visualizer: ContentAwareVisualizer, bg_image: Image.Image
     ):
         empty_bboxes = []
-
-        result_image = visualizer.draw_content_bboxes(bg_image, empty_bboxes)
+        result_image = visualizer.draw_content_bboxes(
+            bg_image, content_bboxes=empty_bboxes
+        )
 
         assert isinstance(result_image, Image.Image)
         # With no bboxes, image should be nearly identical (just copied)

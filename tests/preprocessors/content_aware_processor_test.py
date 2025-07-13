@@ -20,7 +20,9 @@ class TestContentAwareProcessor(LayoutPrompterTestCase):
             ]
             for split in hf_dataset
         }
-        processor = ContentAwareProcessor(target_canvas_size=CanvasSize(width=100, height=150))
+        processor = ContentAwareProcessor(
+            target_canvas_size=CanvasSize(width=100, height=150)
+        )
 
         # Process each split separately since batch expects a list of LayoutData, not a dict
         processed_dataset = {}
@@ -35,8 +37,12 @@ class TestContentAwareProcessor(LayoutPrompterTestCase):
 
     def test_content_aware_processor_hashable(self):
         """Test that ContentAwareProcessor is hashable"""
-        processor1 = ContentAwareProcessor(target_canvas_size=CanvasSize(width=100, height=150))
-        processor2 = ContentAwareProcessor(target_canvas_size=CanvasSize(width=100, height=150))
+        processor1 = ContentAwareProcessor(
+            target_canvas_size=CanvasSize(width=100, height=150)
+        )
+        processor2 = ContentAwareProcessor(
+            target_canvas_size=CanvasSize(width=100, height=150)
+        )
 
         # Test hashability
         processor_set = {processor1, processor2}
@@ -54,7 +60,9 @@ class TestContentAwareProcessor(LayoutPrompterTestCase):
 
     def test_content_aware_processor_immutable(self):
         """Test that ContentAwareProcessor is immutable (frozen)"""
-        processor = ContentAwareProcessor(target_canvas_size=CanvasSize(width=100, height=150))
+        processor = ContentAwareProcessor(
+            target_canvas_size=CanvasSize(width=100, height=150)
+        )
 
         # Attempting to set attributes should raise an error
         with pytest.raises(Exception):  # ValidationError or similar
@@ -62,18 +70,25 @@ class TestContentAwareProcessor(LayoutPrompterTestCase):
 
     def test_content_aware_processor_possible_labels_tuple(self):
         """Test that _possible_labels is properly handled as tuple"""
-        processor = ContentAwareProcessor(target_canvas_size=CanvasSize(width=100, height=150))
+        processor = ContentAwareProcessor(
+            target_canvas_size=CanvasSize(width=100, height=150)
+        )
 
         # Initially should be empty tuple
         assert processor._possible_labels == tuple()
 
         # Create mock layout data with labels
         mock_layout = LayoutData(
-            bboxes=[NormalizedBbox(left=0.1, top=0.1, width=0.5, height=0.5), NormalizedBbox(left=0.2, top=0.2, width=0.6, height=0.6)],
+            bboxes=[
+                NormalizedBbox(left=0.1, top=0.1, width=0.5, height=0.5),
+                NormalizedBbox(left=0.2, top=0.2, width=0.6, height=0.6),
+            ],
             labels=["text", "logo"],
             canvas_size=CanvasSize(width=100, height=100),
             encoded_image="dummy_encoded_image",
-            content_bboxes=[NormalizedBbox(left=0.05, top=0.05, width=0.95, height=0.95)],
+            content_bboxes=[
+                NormalizedBbox(left=0.05, top=0.05, width=0.95, height=0.95)
+            ],
         )
 
         # Process the layout data to add labels to _possible_labels

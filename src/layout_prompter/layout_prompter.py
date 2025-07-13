@@ -12,7 +12,6 @@ import pydantic_numpy.typing as pnd
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
-from loguru import logger
 from PIL import Image
 from pydantic import BaseModel
 

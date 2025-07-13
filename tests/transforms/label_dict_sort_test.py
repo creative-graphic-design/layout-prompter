@@ -1,5 +1,12 @@
 import pytest
-from layout_prompter.models import LayoutData, ProcessedLayoutData, NormalizedBbox, Bbox, CanvasSize
+
+from layout_prompter.models import (
+    Bbox,
+    CanvasSize,
+    LayoutData,
+    NormalizedBbox,
+    ProcessedLayoutData,
+)
 from layout_prompter.transforms.label_dict_sort import LabelDictSort
 
 
@@ -15,7 +22,7 @@ class TestLabelDictSort:
             bboxes=[
                 NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),
                 NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8),
-                NormalizedBbox(left=0.9, top=0.1, width=1.0, height=0.2)
+                NormalizedBbox(left=0.9, top=0.1, width=1.0, height=0.2),
             ],
             labels=["text", "button", "logo"],
             canvas_size=CanvasSize(width=100, height=150),
@@ -29,16 +36,16 @@ class TestLabelDictSort:
             idx=1,
             bboxes=[
                 NormalizedBbox(left=0.2, top=0.3, width=0.4, height=0.5),
-                NormalizedBbox(left=0.6, top=0.7, width=0.8, height=0.9)
+                NormalizedBbox(left=0.6, top=0.7, width=0.8, height=0.9),
             ],
             labels=["text", "button"],
             gold_bboxes=[
                 NormalizedBbox(left=0.2, top=0.3, width=0.4, height=0.5),
-                NormalizedBbox(left=0.6, top=0.7, width=0.8, height=0.9)
+                NormalizedBbox(left=0.6, top=0.7, width=0.8, height=0.9),
             ],
             orig_bboxes=[
                 NormalizedBbox(left=0.2, top=0.3, width=0.4, height=0.5),
-                NormalizedBbox(left=0.6, top=0.7, width=0.8, height=0.9)
+                NormalizedBbox(left=0.6, top=0.7, width=0.8, height=0.9),
             ],
             orig_labels=["text", "button"],
             orig_canvas_size=CanvasSize(width=102, height=150),
@@ -69,7 +76,7 @@ class TestLabelDictSort:
         expected_bboxes = (
             NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8),
             NormalizedBbox(left=0.9, top=0.1, width=1.0, height=0.2),
-            NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4)
+            NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),
         )
         assert result.bboxes == expected_bboxes
         assert result.gold_bboxes == expected_bboxes
@@ -90,7 +97,7 @@ class TestLabelDictSort:
         # Bboxes should be reordered: button[0.6,0.7,0.8,0.9], text[0.2,0.3,0.4,0.5]
         expected_bboxes = (
             NormalizedBbox(left=0.6, top=0.7, width=0.8, height=0.9),
-            NormalizedBbox(left=0.2, top=0.3, width=0.4, height=0.5)
+            NormalizedBbox(left=0.2, top=0.3, width=0.4, height=0.5),
         )
         assert result.bboxes == expected_bboxes
         assert result.gold_bboxes == expected_bboxes
@@ -101,7 +108,7 @@ class TestLabelDictSort:
             idx=2,
             bboxes=[
                 NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),
-                NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8)
+                NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8),
             ],
             labels=["zebra", "apple"],
             canvas_size=CanvasSize(width=100, height=150),
@@ -122,7 +129,7 @@ class TestLabelDictSort:
         # Bboxes should be reordered: apple[0.5,0.6,0.7,0.8], zebra[0.1,0.2,0.3,0.4]
         expected_bboxes = (
             NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8),
-            NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4)
+            NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),
         )
         assert result.bboxes == expected_bboxes
 
@@ -141,7 +148,9 @@ class TestLabelDictSort:
 
         assert isinstance(result, ProcessedLayoutData)
         assert result.labels == ("text",)
-        assert result.bboxes == (NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),)
+        assert result.bboxes == (
+            NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),
+        )
 
     def test_invoke_identical_labels(self, sorter: LabelDictSort):
         """Test sorting with identical labels."""
@@ -150,7 +159,7 @@ class TestLabelDictSort:
             bboxes=[
                 NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),
                 NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8),
-                NormalizedBbox(left=0.9, top=0.1, width=1.0, height=0.2)
+                NormalizedBbox(left=0.9, top=0.1, width=1.0, height=0.2),
             ],
             labels=["text", "text", "text"],
             canvas_size=CanvasSize(width=100, height=150),
@@ -166,7 +175,7 @@ class TestLabelDictSort:
         expected_bboxes = (
             NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),
             NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8),
-            NormalizedBbox(left=0.9, top=0.1, width=1.0, height=0.2)
+            NormalizedBbox(left=0.9, top=0.1, width=1.0, height=0.2),
         )
         assert result.bboxes == expected_bboxes
 
@@ -176,7 +185,7 @@ class TestLabelDictSort:
             idx=5,
             bboxes=[
                 NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),
-                NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8)
+                NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8),
             ],
             labels=["text", "button"],
             canvas_size=CanvasSize(width=100, height=150),
@@ -189,7 +198,7 @@ class TestLabelDictSort:
         # Original data should match input data
         expected_orig_bboxes = [
             NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),
-            NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8)
+            NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8),
         ]
         expected_orig_labels = ["text", "button"]
         assert result.orig_bboxes == expected_orig_bboxes
@@ -201,14 +210,14 @@ class TestLabelDictSort:
             idx=6,
             bboxes=[
                 NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4),
-                NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8)
+                NormalizedBbox(left=0.5, top=0.6, width=0.7, height=0.8),
             ],
             labels=["text", "button"],
             canvas_size=CanvasSize(width=100, height=150),
             encoded_image="base64encoded",
             content_bboxes=[
                 NormalizedBbox(left=0.0, top=0.0, width=1.0, height=1.0),
-                NormalizedBbox(left=0.2, top=0.3, width=0.4, height=0.5)
+                NormalizedBbox(left=0.2, top=0.3, width=0.4, height=0.5),
             ],
         )
 
@@ -217,7 +226,7 @@ class TestLabelDictSort:
         # content_bboxes should be preserved unchanged
         expected_content_bboxes = [
             NormalizedBbox(left=0.0, top=0.0, width=1.0, height=1.0),
-            NormalizedBbox(left=0.2, top=0.3, width=0.4, height=0.5)
+            NormalizedBbox(left=0.2, top=0.3, width=0.4, height=0.5),
         ]
         assert result.content_bboxes == expected_content_bboxes
 

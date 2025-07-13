@@ -2,8 +2,6 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple, Type, Union
 
-import numpy as np
-import pydantic_numpy.typing as pnd
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
 from PIL import Image, ImageDraw

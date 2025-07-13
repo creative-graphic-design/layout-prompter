@@ -4,8 +4,8 @@ import pytest
 from langchain.chat_models import init_chat_model
 
 from layout_prompter.models import (
-    CanvasSize,
     Bbox,
+    CanvasSize,
     LayoutData,
     LayoutSerializedData,
     LayoutSerializedOutputData,
@@ -124,13 +124,13 @@ class TestContentAwareVisualizer(LayoutPrompterTestCase):
         """Test ContentAwareVisualizer initialization."""
         canvas_size = CanvasSize(width=100, height=150)
         labels = ["text", "logo", "underlay"]
-        
+
         visualizer = ContentAwareVisualizer(
             canvas_size=canvas_size,
             labels=labels,
             schema=PosterLayoutSerializedOutputData,
         )
-        
+
         assert visualizer.canvas_size == canvas_size
         assert visualizer.labels == labels
         assert visualizer.schema == PosterLayoutSerializedOutputData
@@ -139,13 +139,13 @@ class TestContentAwareVisualizer(LayoutPrompterTestCase):
         """Test ContentAwareVisualizer layout sorting functionality."""
         canvas_size = CanvasSize(width=100, height=150)
         labels = ["text", "logo", "underlay"]
-        
+
         visualizer = ContentAwareVisualizer(
             canvas_size=canvas_size,
             labels=labels,
             schema=PosterLayoutSerializedOutputData,
         )
-        
+
         # Create test layouts with different sizes
         layouts = [
             LayoutSerializedData(
@@ -153,7 +153,7 @@ class TestContentAwareVisualizer(LayoutPrompterTestCase):
                 bbox=Bbox(left=0, top=0, width=10, height=10),  # area = 100
             ),
             LayoutSerializedData(
-                class_name="large", 
+                class_name="large",
                 bbox=Bbox(left=0, top=0, width=20, height=30),  # area = 600
             ),
             LayoutSerializedData(
@@ -161,11 +161,11 @@ class TestContentAwareVisualizer(LayoutPrompterTestCase):
                 bbox=Bbox(left=0, top=0, width=15, height=20),  # area = 300
             ),
         ]
-        
+
         sorted_layouts = visualizer.get_sorted_layouts(layouts)
-        
+
         # Should be sorted by area in descending order
         assert len(sorted_layouts) == 3
-        assert sorted_layouts[0].class_name == "large"   # area = 600
+        assert sorted_layouts[0].class_name == "large"  # area = 600
         assert sorted_layouts[1].class_name == "medium"  # area = 300
-        assert sorted_layouts[2].class_name == "small"   # area = 100
+        assert sorted_layouts[2].class_name == "small"  # area = 100
