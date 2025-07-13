@@ -20,8 +20,9 @@ from layout_prompter.modules.serializers import (
 )
 from layout_prompter.preprocessors import ContentAwareProcessor
 from layout_prompter.settings import PosterLayoutSettings, TaskSettings
+from layout_prompter.utils.image import generate_color_palette
 from layout_prompter.utils.testing import LayoutPrompterTestCase
-from layout_prompter.visualizers import ContentAwareVisualizer, generate_color_palette
+from layout_prompter.visualizers import ContentAwareVisualizer
 
 
 class TestContentAwareVisualizer(LayoutPrompterTestCase):
