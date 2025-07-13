@@ -1,6 +1,11 @@
-from .layout_data import LayoutData, ProcessedLayoutData
+from .layout_data import (
+    Bbox,
+    CanvasSize,
+    LayoutData,
+    NormalizedBbox,
+    ProcessedLayoutData,
+)
 from .serialized_data import (
-    Coordinates,
     LayoutSerializedData,
     LayoutSerializedOutputData,
     PosterLayoutSerializedData,
@@ -10,9 +15,11 @@ from .serialized_data import (
 )
 
 __all__ = [
+    "CanvasSize",
+    "Bbox",
+    "NormalizedBbox",
     "LayoutData",
     "ProcessedLayoutData",
-    "Coordinates",
     #
     # Base Protocols
     #

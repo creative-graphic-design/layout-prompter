@@ -2,8 +2,9 @@ import argparse
 import pathlib
 from typing import List, cast
 
-from core.utils.workers import get_num_workers
 from langchain.chat_models import init_chat_model
+from tqdm.auto import tqdm
+
 from layout_prompter import LayoutPrompter
 from layout_prompter.datasets import load_poster_layout
 from layout_prompter.models import (
@@ -18,8 +19,8 @@ from layout_prompter.modules import (
 )
 from layout_prompter.preprocessors import ContentAwareProcessor
 from layout_prompter.settings import PosterLayoutSettings
+from layout_prompter.utils.workers import get_num_workers
 from layout_prompter.visualizers import ContentAwareVisualizer
-from tqdm.auto import tqdm
 
 
 def parse_args() -> argparse.Namespace:
@@ -69,7 +70,7 @@ def main(args: argparse.Namespace) -> None:
         for split in hf_dataset
     }
 
-    processor = ContentAwareProcessor(canvas_size=settings.canvas_size)
+    processor = ContentAwareProcessor(target_canvas_size=settings.canvas_size)
     candidate_examples = cast(
         List[ProcessedLayoutData],
         processor.batch(
@@ -90,7 +91,6 @@ def main(args: argparse.Namespace) -> None:
     layout_prompter = LayoutPrompter(
         selector=ContentAwareSelector(
             num_prompt=args.num_prompt,
-            canvas_size=settings.canvas_size,
             examples=candidate_examples,
         ),
         serializer=ContentAwareSerializer(

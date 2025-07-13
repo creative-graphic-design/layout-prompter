@@ -1,6 +1,7 @@
 from typing import Dict, List, Type, cast
 
 import pytest
+
 from layout_prompter.models import (
     LayoutData,
     LayoutSerializedData,
@@ -19,8 +20,8 @@ from layout_prompter.utils.testing import LayoutPrompterTestCase
 
 class TestContentAwareSerializer(LayoutPrompterTestCase):
     @pytest.fixture
-    def processor(self) -> ContentAwareProcessor:
-        return ContentAwareProcessor()
+    def processor(self, settings: TaskSettings) -> ContentAwareProcessor:
+        return ContentAwareProcessor(target_canvas_size=settings.canvas_size)
 
     @pytest.mark.parametrize(
         argnames=("settings", "input_schema"),
@@ -42,7 +43,7 @@ class TestContentAwareSerializer(LayoutPrompterTestCase):
 
         examples = cast(
             List[ProcessedLayoutData],
-            processor.invoke(input=tng_dataset),
+            processor.batch(inputs=tng_dataset),
         )
         selector = ContentAwareSelector(
             canvas_size=settings.canvas_size,
@@ -53,7 +54,7 @@ class TestContentAwareSerializer(LayoutPrompterTestCase):
         processed_test_data = cast(
             ProcessedLayoutData, processor.invoke(input=tst_data)
         )
-        candidates = selector.select_examples(processed_test_data)
+        selector_output = selector.select_examples(processed_test_data)
 
         serializer = ContentAwareSerializer(
             layout_domain=settings.domain,
@@ -61,7 +62,8 @@ class TestContentAwareSerializer(LayoutPrompterTestCase):
         )
         prompt = serializer.invoke(
             input=LayoutSerializerInput(
-                query=processed_test_data, candidates=candidates
+                query=processed_test_data,
+                candidates=selector_output.selected_examples,
             )
         )
         for message in prompt.to_messages():

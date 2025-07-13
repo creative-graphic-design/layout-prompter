@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
+
+from layout_prompter.models.layout_data import Bbox, NormalizedBbox
 from layout_prompter.utils.bbox import (
-    convert_ltwh_to_ltrb,
-    decapsulate,
     normalize_bboxes,
 )
 
@@ -66,114 +66,63 @@ class TestBboxUtilsComprehensive:
         assert result.shape == (0, 4)
         assert result.dtype == np.float32
 
-    def test_decapsulate_2d_array(self):
-        bboxes = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+    def test_bbox_to_ltrb_conversion(self):
+        """Test Bbox class to_ltrb method"""
+        bbox = Bbox(left=10, top=20, width=30, height=40)
 
-        result = decapsulate(bboxes)
+        result = bbox.to_ltrb()
 
-        # Should transpose the array
-        expected = bboxes.T
-        assert np.array_equal(result, expected)
-        assert result.shape == (4, 2)
+        expected = (10, 20, 40, 60)  # left, top, right, bottom
+        assert result == expected
 
-    def test_decapsulate_3d_array(self):
-        # Create a 3D array (batch_size, num_boxes, 4)
-        bboxes = np.array(
-            [
-                [[10, 20, 30, 40], [50, 60, 70, 80]],
-                [[90, 100, 110, 120], [130, 140, 150, 160]],
-            ]
-        )
+    def test_bbox_to_ltwh_conversion(self):
+        """Test Bbox class to_ltwh method"""
+        bbox = Bbox(left=10, top=20, width=30, height=40)
 
-        result = decapsulate(bboxes)
+        result = bbox.to_ltwh()
 
-        # Should transpose with axis permutation (2, 0, 1)
-        expected = np.transpose(bboxes, (2, 0, 1))
-        assert np.array_equal(result, expected)
-        assert result.shape == (4, 2, 2)
+        expected = (10, 20, 30, 40)  # left, top, width, height
+        assert result == expected
 
-    def test_decapsulate_single_batch_3d(self):
-        # Test with single batch dimension
-        bboxes = np.array([[[10, 20, 30, 40]]])  # shape: (1, 1, 4)
+    def test_normalized_bbox_to_ltrb_conversion(self):
+        """Test NormalizedBbox class to_ltrb method"""
+        bbox = NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4)
 
-        result = decapsulate(bboxes)
+        result = bbox.to_ltrb()
 
-        expected = np.transpose(bboxes, (2, 0, 1))
-        assert np.array_equal(result, expected)
-        assert result.shape == (4, 1, 1)
+        expected = (0.1, 0.2, 0.4, 0.6)  # left, top, right, bottom
+        assert result == pytest.approx(expected)
 
-    def test_convert_ltwh_to_ltrb_1d_array(self):
-        bbox = np.array([10, 20, 30, 40])  # left, top, width, height
+    def test_bbox_properties(self):
+        """Test Bbox class right and bottom properties"""
+        bbox = Bbox(left=10, top=20, width=30, height=40)
 
-        result = convert_ltwh_to_ltrb(bbox)
+        assert bbox.right == 40  # 10 + 30
+        assert bbox.bottom == 60  # 20 + 40
 
-        expected = np.array([10, 20, 40, 60])  # left, top, right, bottom
-        assert np.array_equal(result, expected)
+    def test_normalized_bbox_properties(self):
+        """Test NormalizedBbox class right and bottom properties"""
+        bbox = NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4)
 
-    def test_convert_ltwh_to_ltrb_2d_array(self):
-        bboxes = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+        assert bbox.right == pytest.approx(0.4)  # 0.1 + 0.3
+        assert bbox.bottom == pytest.approx(0.6)  # 0.2 + 0.4
 
-        result = convert_ltwh_to_ltrb(bboxes)
+    def test_bbox_zero_dimensions(self):
+        """Test bbox with zero dimensions"""
+        bbox = Bbox(left=0, top=0, width=0, height=0)
 
-        expected = np.array([[10, 20, 40, 60], [50, 60, 120, 140]])
-        assert np.array_equal(result, expected)
-        assert result.shape == (2, 4)
+        assert bbox.to_ltrb() == (0, 0, 0, 0)
+        assert bbox.to_ltwh() == (0, 0, 0, 0)
 
-    def test_convert_ltwh_to_ltrb_3d_array(self):
-        # Test with batch dimension
-        bboxes = np.array(
-            [
-                [[10, 20, 30, 40], [50, 60, 70, 80]],
-                [[90, 100, 110, 120], [130, 140, 150, 160]],
-            ]
-        )
+    def test_bbox_negative_coordinates_not_allowed(self):
+        """Test that negative coordinates are not allowed for Bbox"""
+        with pytest.raises(Exception):  # Pydantic validation error
+            Bbox(left=-10, top=-20, width=30, height=40)
 
-        result = convert_ltwh_to_ltrb(bboxes)
-
-        # The function preserves the batch structure, so shape should be (2, 2, 4)
-        expected_shape = (2, 2, 4)
-        assert result.shape == expected_shape
-
-        # Check conversion: left, top, width, height -> left, top, right, bottom
-        # First batch, first bbox: [10, 20, 30, 40] -> [10, 20, 40, 60]
-        assert np.array_equal(result[0, 0], [10, 20, 40, 60])
-        # First batch, second bbox: [50, 60, 70, 80] -> [50, 60, 120, 140]
-        assert np.array_equal(result[0, 1], [50, 60, 120, 140])
-        # Second batch, first bbox: [90, 100, 110, 120] -> [90, 100, 200, 220]
-        assert np.array_equal(result[1, 0], [90, 100, 200, 220])
-
-    def test_convert_ltwh_to_ltrb_zero_dimensions(self):
-        bbox = np.array([0, 0, 0, 0])
-
-        result = convert_ltwh_to_ltrb(bbox)
-
-        expected = np.array([0, 0, 0, 0])
-        assert np.array_equal(result, expected)
-
-    def test_convert_ltwh_to_ltrb_negative_coordinates(self):
-        bbox = np.array([-10, -20, 30, 40])
-
-        result = convert_ltwh_to_ltrb(bbox)
-
-        expected = np.array([-10, -20, 20, 20])  # -10+30=20, -20+40=20
-        assert np.array_equal(result, expected)
-
-    def test_convert_ltwh_to_ltrb_float_values(self):
-        bbox = np.array([10.5, 20.3, 30.7, 40.1])
-
-        result = convert_ltwh_to_ltrb(bbox)
-
-        expected = np.array([10.5, 20.3, 41.2, 60.4])
-        assert np.allclose(result, expected)
-
-    def test_convert_ltwh_to_ltrb_empty_array(self):
-        bboxes = np.empty((0, 4))
-
-        result = convert_ltwh_to_ltrb(bboxes)
-
-        # For empty 2D array, the function preserves the empty structure
-        expected_shape = (0, 4)  # Same shape but converted coordinates
-        assert result.shape == expected_shape
+    def test_normalized_bbox_out_of_range_not_allowed(self):
+        """Test that values outside [0,1] are not allowed for NormalizedBbox"""
+        with pytest.raises(Exception):  # Pydantic validation error
+            NormalizedBbox(left=1.5, top=0.2, width=0.3, height=0.4)
 
     def test_normalize_bboxes_edge_case_large_numbers(self):
         bboxes = np.array([[1000, 2000, 3000, 4000]])
@@ -194,3 +143,18 @@ class TestBboxUtilsComprehensive:
         assert result.dtype == np.float32
         expected = np.array([[0.1, 0.1, 0.3, 0.2]], dtype=np.float32)
         assert np.allclose(result, expected)
+
+    def test_bbox_discretization(self):
+        """Test NormalizedBbox discretization to Bbox"""
+        from layout_prompter.models.layout_data import CanvasSize
+
+        normalized_bbox = NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4)
+        canvas_size = CanvasSize(width=100, height=150)
+
+        discrete_bbox = normalized_bbox.discretize(canvas_size)
+
+        assert isinstance(discrete_bbox, Bbox)
+        assert discrete_bbox.left == 10  # 0.1 * 100
+        assert discrete_bbox.top == 30  # 0.2 * 150
+        assert discrete_bbox.width == 30  # 0.3 * 100
+        assert discrete_bbox.height == 60  # 0.4 * 150

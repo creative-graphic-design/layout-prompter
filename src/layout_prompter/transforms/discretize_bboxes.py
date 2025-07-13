@@ -1,43 +1,16 @@
 import copy
 from typing import Any, Union
 
-import numpy as np
 from langchain_core.runnables import RunnableSerializable
 from langchain_core.runnables.config import RunnableConfig
 from loguru import logger
 
-from layout_prompter.models import LayoutData, ProcessedLayoutData
-from layout_prompter.settings import CanvasSize
-from layout_prompter.utils import decapsulate
+from layout_prompter.models import CanvasSize, LayoutData, ProcessedLayoutData
 
 
 class DiscretizeBboxes(RunnableSerializable):
     name: str = "discretize-bboxes"
-    canvas_size: CanvasSize
-
-    def discretize(self, bboxes: np.ndarray) -> np.ndarray:
-        assert bboxes.shape[1] == 4, "bboxes should be of shape (N, 4)"
-
-        clipped_bboxes = np.clip(bboxes, a_min=0.0, a_max=1.0)
-        x1, y1, x2, y2 = decapsulate(clipped_bboxes)
-
-        discrete_x1 = np.floor(x1 * self.canvas_size.width)
-        discrete_y1 = np.floor(y1 * self.canvas_size.height)
-        discrete_x2 = np.floor(x2 * self.canvas_size.width)
-        discrete_y2 = np.floor(y2 * self.canvas_size.height)
-
-        discrete_bboxes = np.stack(
-            [discrete_x1, discrete_y1, discrete_x2, discrete_y2], axis=-1
-        )
-
-        return discrete_bboxes.astype(np.int32)
-
-    def continuize(self, bboxes: np.ndarray, width: int, height: int) -> np.ndarray:
-        x1, y1, x2, y2 = decapsulate(bboxes)
-        cx1, cx2 = x1 / width, x2 / width
-        cy1, cy2 = y1 / height, y2 / height
-        continuize_bboxes = np.stack([cx1, cy1, cx2, cy2], axis=-1)
-        return continuize_bboxes.astype(np.float32)
+    target_canvas_size: CanvasSize
 
     def invoke(
         self,
@@ -47,7 +20,9 @@ class DiscretizeBboxes(RunnableSerializable):
     ) -> ProcessedLayoutData:
         assert input.bboxes is not None and input.labels is not None
 
-        canvas_size = input.canvas_size
+        logger.trace(
+            f"Discretize from {input.canvas_size=} to the {self.target_canvas_size=}"
+        )
 
         bboxes, labels = copy.deepcopy(input.bboxes), copy.deepcopy(input.labels)
         content_bboxes = (
@@ -70,16 +45,29 @@ class DiscretizeBboxes(RunnableSerializable):
             if isinstance(input, LayoutData)
             else input.orig_labels
         )
+        orig_canvas_size = (
+            input.orig_canvas_size
+            if isinstance(input, ProcessedLayoutData)
+            else input.canvas_size
+        )
 
-        discrete_bboxes = self.discretize(bboxes)
-        discrete_gold_bboxes = self.discretize(gold_bboxes)
+        discrete_bboxes = [
+            bbox.discretize(canvas_size=self.target_canvas_size) for bbox in bboxes
+        ]
+        discrete_gold_bboxes = [
+            bbox.discretize(canvas_size=self.target_canvas_size) for bbox in gold_bboxes
+        ]
 
         content_bboxes = (
             copy.deepcopy(input.content_bboxes) if input.is_content_aware() else None
         )
-
         discrete_content_bboxes = (
-            self.discretize(content_bboxes) if content_bboxes is not None else None
+            [
+                bbox.discretize(canvas_size=self.target_canvas_size)
+                for bbox in content_bboxes
+            ]
+            if content_bboxes is not None
+            else None
         )
 
         processed_data = ProcessedLayoutData(
@@ -94,7 +82,8 @@ class DiscretizeBboxes(RunnableSerializable):
             discrete_content_bboxes=discrete_content_bboxes,
             orig_bboxes=orig_bboxes,
             orig_labels=orig_labels,
-            canvas_size=canvas_size,
+            orig_canvas_size=orig_canvas_size,
+            canvas_size=self.target_canvas_size,
         )
         logger.trace(f"{processed_data=}")
         return processed_data

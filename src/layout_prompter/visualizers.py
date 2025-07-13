@@ -2,18 +2,17 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple, Type, Union
 
-import numpy as np
-import pydantic_numpy.typing as pnd
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
 from PIL import Image, ImageDraw
 
 from layout_prompter.models import (
+    Bbox,
+    CanvasSize,
     LayoutSerializedData,
     LayoutSerializedOutputData,
     ProcessedLayoutData,
 )
-from layout_prompter.settings import CanvasSize
 from layout_prompter.typehints import PilImage
 from layout_prompter.utils import Configuration, generate_color_palette
 
@@ -33,7 +32,7 @@ class ContentAwareVisualizerConfig(VisualizerConfig):
     """Configuration for ContentAwareVisualizer."""
 
     bg_image: PilImage
-    content_bboxes: Optional[pnd.NpNDArray] = None
+    content_bboxes: Optional[List[Bbox]] = None
 
 
 @dataclass
@@ -55,12 +54,7 @@ class Visualizer(Runnable):
             "layouts": [
                 {
                     "class_name": class_name,
-                    "coord": {
-                        "left": bbox[0],
-                        "top": bbox[1],
-                        "width": bbox[2],
-                        "height": bbox[3],
-                    },
+                    "bbox": bbox.model_dump(),
                 }
                 for class_name, bbox in zip(
                     processed_data.labels, processed_data.discrete_bboxes
@@ -73,14 +67,15 @@ class Visualizer(Runnable):
         self, layouts: List[LayoutSerializedData]
     ) -> List[LayoutSerializedData]:
         """Sort layouts by area in descending order."""
-        # Calculate the area of each layout
-        areas = [layout.coord.width * layout.coord.height for layout in layouts]
-
-        # Get the indices of the areas sorted in descending order
-        indices = sorted(range(len(areas)), key=lambda i: areas[i], reverse=True)
-
-        # Sort the layouts by area
-        return [layouts[i] for i in indices]
+        return list(
+            sorted(
+                layouts,
+                # calculate area
+                key=lambda layout: layout.bbox.width * layout.bbox.height,
+                # sort by area in descending order
+                reverse=True,
+            )
+        )
 
     def draw_layout_bboxes(
         self,
@@ -102,12 +97,9 @@ class Visualizer(Runnable):
         c_fill = color + (opacity,)
 
         # Draw the layout bbox on the canvas
-        x1, y1, x2, y2 = (
-            layout.coord.left,
-            layout.coord.top,
-            layout.coord.left + layout.coord.width,
-            layout.coord.top + layout.coord.height,
-        )
+        x1, y1, x2, y2 = layout.bbox.to_ltrb()
+
+        # Scale the coordinates based on the resize ratio
         x1, y1, x2, y2 = (
             int(x1 * resize_ratio),
             int(y1 * resize_ratio),
@@ -178,7 +170,7 @@ class ContentAwareVisualizer(Visualizer):
     def draw_content_bboxes(
         self,
         image: PilImage,
-        content_bboxes: np.ndarray,
+        content_bboxes: List[Bbox],
         resize_ratio: float = 1.0,
         font_color: Tuple[int, int, int] = (255, 255, 255),
     ) -> PilImage:
@@ -186,8 +178,7 @@ class ContentAwareVisualizer(Visualizer):
         draw = ImageDraw.Draw(image, mode="RGBA")
 
         for bbox in content_bboxes:
-            x1, y1, w, h = bbox
-            x2, y2 = x1 + w, y1 + h
+            x1, y1, x2, y2 = bbox.to_ltrb()
 
             x1, y1, x2, y2 = (
                 int(x1 * resize_ratio),

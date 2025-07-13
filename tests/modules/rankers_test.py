@@ -1,8 +1,9 @@
 from unittest.mock import Mock
 
 import pytest
+
+from layout_prompter.models.layout_data import Bbox
 from layout_prompter.models.serialized_data import (
-    Coordinates,
     PosterLayoutSerializedData,
     PosterLayoutSerializedOutputData,
 )
@@ -14,14 +15,14 @@ def sample_layouts():
     """Create sample layout data for testing."""
     layouts = [
         PosterLayoutSerializedData(
-            class_name="text", coord=Coordinates(left=10, top=20, width=100, height=30)
+            class_name="text", bbox=Bbox(left=10, top=20, width=100, height=30)
         ),
         PosterLayoutSerializedData(
-            class_name="logo", coord=Coordinates(left=50, top=60, width=80, height=40)
+            class_name="logo", bbox=Bbox(left=50, top=60, width=80, height=40)
         ),
         PosterLayoutSerializedData(
             class_name="underlay",
-            coord=Coordinates(left=0, top=0, width=200, height=150),
+            bbox=Bbox(left=0, top=0, width=200, height=150),
         ),
     ]
     return layouts

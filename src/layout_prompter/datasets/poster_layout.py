@@ -1,14 +1,11 @@
-import logging
-
-import numpy as np
-
 import datasets as ds
+import numpy as np
+from loguru import logger
+
 from layout_prompter.models import LayoutData
 from layout_prompter.settings import PosterLayoutSettings
 from layout_prompter.transforms import SaliencyMapToBboxes
 from layout_prompter.utils import normalize_bboxes, pil_to_base64
-
-logger = logging.getLogger(__name__)
 
 
 def _filter_empty_data(example):
@@ -25,7 +22,7 @@ def _filter_empty_content_bboxes(example):
     return example["content_bboxes"] is not None
 
 
-def load_raw_poste_layout(
+def load_raw_poster_layout(
     dataset_name: str = "creative-graphic-design/PKU-PosterLayout",
 ) -> ds.DatasetDict:
     # Load the PosterLayout dataset
@@ -46,7 +43,7 @@ def load_poster_layout(
     settings = PosterLayoutSettings()
 
     # Load the PosterLayout dataset
-    dataset = load_raw_poste_layout(dataset_name)
+    dataset = load_raw_poster_layout(dataset_name)
 
     # Apply filtering to remove invalid data
     dataset = dataset.filter(
@@ -98,13 +95,43 @@ def load_poster_layout(
         canvas_size = settings.canvas_size.model_dump()
 
         data = {
-            "bboxes": bboxes,
-            "labels": labels,
+            "bboxes": [
+                {
+                    "left": bbox[0],
+                    "top": bbox[1],
+                    "width": bbox[2],
+                    "height": bbox[3],
+                }
+                for bbox in bboxes.tolist()
+            ]
+            if bboxes is not None
+            else None,
+            "labels": labels.tolist() if labels is not None else None,
             "canvas_size": canvas_size,
             "encoded_image": encoded_image,
-            "content_bboxes": content_bboxes,
+            "content_bboxes": [
+                {
+                    "left": bbox[0],
+                    "top": bbox[1],
+                    "width": bbox[2],
+                    "height": bbox[3],
+                }
+                for bbox in content_bboxes.tolist()
+            ]
+            if content_bboxes is not None
+            else None,
         }
-        assert LayoutData.model_validate(data)
+
+        try:
+            # Ensure the data conforms to the `LayoutData` model
+            assert LayoutData.model_validate(data)
+        except Exception as err:
+            logger.trace(
+                f"Data validation failed: {err}. Data: {example=}. "
+                "This may be due to an empty content_bboxes."
+            )
+            return None
+
         return data
 
     dataset = dataset.map(

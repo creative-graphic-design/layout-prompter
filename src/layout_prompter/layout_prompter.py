@@ -17,7 +17,11 @@ from pydantic import BaseModel
 
 from layout_prompter.models import LayoutSerializedOutputData, ProcessedLayoutData
 from layout_prompter.modules.rankers import LayoutRanker
-from layout_prompter.modules.selectors import ContentAwareSelectorOutput, LayoutSelector
+from layout_prompter.modules.selectors import (
+    ContentAwareSelector,
+    ContentAwareSelectorOutput,
+    LayoutSelector,
+)
 from layout_prompter.modules.serializers import LayoutSerializer, LayoutSerializerInput
 from layout_prompter.typehints import PilImage
 from layout_prompter.utils import Configuration
@@ -67,6 +71,11 @@ class LayoutPrompter(Runnable):
     ) -> LayoutPrompterOutput:
         # Load configuration
         conf = LayoutPrompterConfiguration.from_runnable_config(config)
+
+        if isinstance(self.selector, ContentAwareSelector):
+            assert conf.return_saliency_maps == self.selector.return_saliency_maps, (
+                "The `return_saliency_maps` configuration must match the selector's setting."
+            )
 
         # Get candidates based on the input query
         selector_output = self.selector.select_examples(input)
