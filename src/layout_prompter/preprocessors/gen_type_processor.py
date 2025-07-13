@@ -1,4 +1,4 @@
-from .base import Processor, ProcessorConfig
+from .base import Processor
 
 
 class GenTypeProcessor(Processor):
