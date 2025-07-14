@@ -1,28 +1,32 @@
 import copy
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 from langchain_core.runnables import RunnableSerializable
 from langchain_core.runnables.config import RunnableConfig
 from loguru import logger
 
 from layout_prompter.models import CanvasSize, LayoutData, ProcessedLayoutData
+from layout_prompter.utils import Configuration
+
+
+class DiscretizeBboxesConfig(Configuration):
+    """Configuration for Transform classes."""
+
+    target_canvas_size: CanvasSize
 
 
 class DiscretizeBboxes(RunnableSerializable):
     name: str = "discretize-bboxes"
-    target_canvas_size: CanvasSize
 
     def invoke(
         self,
         input: Union[LayoutData, ProcessedLayoutData],
-        config: RunnableConfig | None = None,
+        config: Optional[RunnableConfig] = None,
         **kwargs: Any,
     ) -> ProcessedLayoutData:
-        assert input.bboxes is not None and input.labels is not None
+        conf = DiscretizeBboxesConfig.from_runnable_config(config)
 
-        logger.trace(
-            f"Discretize from {input.canvas_size=} to the {self.target_canvas_size=}"
-        )
+        assert input.bboxes is not None and input.labels is not None
 
         bboxes, labels = copy.deepcopy(input.bboxes), copy.deepcopy(input.labels)
         content_bboxes = (
@@ -51,11 +55,15 @@ class DiscretizeBboxes(RunnableSerializable):
             else input.canvas_size
         )
 
+        logger.trace(
+            f"Discretize from {input.canvas_size=} to the {conf.target_canvas_size=}"
+        )
+
         discrete_bboxes = [
-            bbox.discretize(canvas_size=self.target_canvas_size) for bbox in bboxes
+            bbox.discretize(canvas_size=conf.target_canvas_size) for bbox in bboxes
         ]
         discrete_gold_bboxes = [
-            bbox.discretize(canvas_size=self.target_canvas_size) for bbox in gold_bboxes
+            bbox.discretize(canvas_size=conf.target_canvas_size) for bbox in gold_bboxes
         ]
 
         content_bboxes = (
@@ -63,7 +71,7 @@ class DiscretizeBboxes(RunnableSerializable):
         )
         discrete_content_bboxes = (
             [
-                bbox.discretize(canvas_size=self.target_canvas_size)
+                bbox.discretize(canvas_size=conf.target_canvas_size)
                 for bbox in content_bboxes
             ]
             if content_bboxes is not None
@@ -83,7 +91,7 @@ class DiscretizeBboxes(RunnableSerializable):
             orig_bboxes=orig_bboxes,
             orig_labels=orig_labels,
             orig_canvas_size=orig_canvas_size,
-            canvas_size=self.target_canvas_size,
+            canvas_size=conf.target_canvas_size,
         )
         logger.trace(f"{processed_data=}")
         return processed_data

@@ -5,13 +5,11 @@ from langchain_core.runnables.config import RunnableConfig
 from loguru import logger
 
 from layout_prompter.models import (
-    CanvasSize,
     LayoutData,
     NormalizedBbox,
     ProcessedLayoutData,
 )
 from layout_prompter.transforms import (
-    DiscretizeBboxes,
     LabelDictSort,
     LexicographicSort,
 )
@@ -28,7 +26,6 @@ class ContentAwareProcessorConfig(ProcessorConfig):
 class ContentAwareProcessor(Processor):
     name: str = "content-aware-processor"
 
-    target_canvas_size: CanvasSize
     max_element_numbers: int = 10
 
     # Store the possible labels from the training data.
@@ -36,7 +33,10 @@ class ContentAwareProcessor(Processor):
     _possible_labels: Tuple[Tuple[str, ...], ...] = tuple()  # type: ignore[assignment]
 
     def _invoke(
-        self, layout_data: LayoutData, config: Optional[RunnableConfig] = None, **kwargs
+        self,
+        layout_data: LayoutData,
+        config: Optional[RunnableConfig] = None,
+        **kwargs,
     ) -> ProcessedLayoutData:
         conf = ContentAwareProcessorConfig.from_runnable_config(config)
 
@@ -80,14 +80,10 @@ class ContentAwareProcessor(Processor):
             )
 
         # Define the chain of preprocess transformations
-        chain = (
-            LexicographicSort()
-            | LabelDictSort()
-            | DiscretizeBboxes(target_canvas_size=self.target_canvas_size)
-        )
+        chain = LexicographicSort() | LabelDictSort()
 
         # Execute the transformations
-        processed_layout_data = chain.invoke(layout_data)
+        processed_layout_data = chain.invoke(layout_data, config=config)
         assert isinstance(processed_layout_data, ProcessedLayoutData)
 
         return processed_layout_data
