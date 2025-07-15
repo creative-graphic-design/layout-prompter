@@ -29,6 +29,7 @@ typecheck: install
 .PHONY: test
 test: install
 	uv run pytest -vs \
+		--last-failed \
 		--log-cli-level=INFO \
 		--import-mode=importlib \
 		--cov
