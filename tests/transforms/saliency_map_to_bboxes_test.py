@@ -1,14 +1,14 @@
+import datasets as ds
 import numpy as np
 import pytest
-from layout_prompter.transforms import SaliencyMapToBboxes
 from PIL import Image
 
-import datasets as ds
+from layout_prompter.transforms import SaliencyMapToBboxes
 
 
-def test_saliency_map_to_bboxes(raw_hf_dataset: ds.DatasetDict):
+def test_saliency_map_to_bboxes(raw_hf_poster_layout_dataset: ds.DatasetDict):
     """Test the main invoke method with real dataset"""
-    saliency_map = raw_hf_dataset["train"][0]["pfpn_saliency_map"]
+    saliency_map = raw_hf_poster_layout_dataset["train"][0]["pfpn_saliency_map"]
 
     transformer = SaliencyMapToBboxes(threshold=100)
     bboxes = transformer.invoke(saliency_map)

@@ -7,7 +7,12 @@ import pytest
 from loguru import logger
 from tqdm.auto import tqdm
 
-from layout_prompter.datasets import load_poster_layout, load_raw_poster_layout
+from layout_prompter.datasets import (
+    load_poster_layout,
+    load_raw_poster_layout,
+    load_raw_rico,
+    load_rico25,
+)
 from layout_prompter.models import LayoutData
 
 
@@ -29,11 +34,8 @@ def test_fixtures_dir(root_dir: pathlib.Path) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def processed_data_path(test_fixtures_dir: pathlib.Path) -> pathlib.Path:
-    """
-    Return the path to the processed data directory.
-    This is used to store or access processed datasets.
-    """
+def poster_layout_processed_data_path(test_fixtures_dir: pathlib.Path) -> pathlib.Path:
+    """Return the path to the processed poster layout data directory."""
     processed_data_path = (
         test_fixtures_dir / "datasets" / "poster-layout" / "processed.pkl"
     )
@@ -42,40 +44,98 @@ def processed_data_path(test_fixtures_dir: pathlib.Path) -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
-def raw_hf_dataset() -> ds.DatasetDict:
+def rico25_processed_data_path(test_fixtures_dir: pathlib.Path) -> pathlib.Path:
+    """Return the path to the processed rico data directory."""
+    processed_data_path = test_fixtures_dir / "datasets" / "rico25" / "processed.pkl"
+    processed_data_path.parent.mkdir(parents=True, exist_ok=True)
+    return processed_data_path
+
+
+@pytest.fixture(scope="session")
+def raw_hf_poster_layout_dataset() -> ds.DatasetDict:
     """Return the raw Hugging Face dataset for Poster Layout."""
     return load_raw_poster_layout()
 
 
 @pytest.fixture(scope="session")
-def hf_dataset() -> ds.DatasetDict:
+def raw_poster_layout_dataset() -> ds.DatasetDict:
     """Return the processed Hugging Face dataset for Poster Layout."""
     return load_poster_layout()
 
 
 @pytest.fixture(scope="session")
-def layout_dataset(
-    hf_dataset: ds.DatasetDict, processed_data_path: pathlib.Path
-) -> Dict[str, List[LayoutData]]:
-    """Load or process the Poster Layout dataset.
+def raw_hf_rico_dataset() -> ds.DatasetDict:
+    """Return the raw Rico dataset."""
+    return load_raw_rico()
 
-    If the processed dataset exists, load it; otherwise, process the raw dataset.
-    """
-    if processed_data_path.exists():
-        logger.debug(f"Loading processed dataset from {processed_data_path}")
-        with processed_data_path.open("rb") as rf:
+
+@pytest.fixture(scope="session")
+def raw_rico25_dataset() -> ds.DatasetDict:
+    """Return the raw Rico 25 dataset."""
+    return load_rico25()
+
+
+@pytest.fixture(scope="session")
+def poster_layout_dataset(
+    raw_poster_layout_dataset: ds.DatasetDict,
+    poster_layout_processed_data_path: pathlib.Path,
+) -> Dict[str, List[LayoutData]]:
+    """Load or process the Poster Layout dataset."""
+    if poster_layout_processed_data_path.exists():
+        logger.debug(
+            f"Loading processed poster layout dataset from {poster_layout_processed_data_path}"
+        )
+        with poster_layout_processed_data_path.open("rb") as rf:
             return pickle.load(rf)
 
+    # Convert Poster Layout dataset to LayoutData format
     layout_dataset = {
         split: [
             LayoutData.model_validate(data)
-            for data in tqdm(hf_dataset[split], desc=f"Processing for {split}")
+            for data in tqdm(
+                raw_poster_layout_dataset[split],
+                desc=f"Processing poster layout for {split}",
+            )
         ]
-        for split in hf_dataset
+        for split in raw_poster_layout_dataset
     }
+    logger.debug(
+        f"Saving processed poster layout dataset to {poster_layout_processed_data_path}",
+    )
+    with poster_layout_processed_data_path.open("wb") as wf:
+        pickle.dump(layout_dataset, wf)
 
-    logger.debug(f"Saving processed dataset to {processed_data_path}")
-    with processed_data_path.open("wb") as wf:
+    return layout_dataset
+
+
+@pytest.fixture(scope="session")
+def rico25_dataset(
+    raw_rico25_dataset: ds.DatasetDict,
+    rico25_processed_data_path: pathlib.Path,
+) -> Dict[str, List[LayoutData]]:
+    """Load or process the Rico dataset."""
+    if rico25_processed_data_path.exists():
+        logger.debug(
+            f"Loading processed rico dataset from {rico25_processed_data_path}"
+        )
+        with rico25_processed_data_path.open("rb") as rf:
+            return pickle.load(rf)
+
+    # Convert Rico dataset to LayoutData format
+    layout_dataset = {
+        split: [
+            LayoutData.model_validate(data)
+            for data in tqdm(
+                raw_rico25_dataset[split],
+                desc=f"Processing poster layout for {split}",
+            )
+        ]
+        for split in raw_rico25_dataset
+    }
+    logger.debug(
+        f"Saving processed rico dataset to {rico25_processed_data_path}",
+    )
+    with rico25_processed_data_path.open("wb") as wf:
         pickle.dump(layout_dataset, wf)
 
     return layout_dataset

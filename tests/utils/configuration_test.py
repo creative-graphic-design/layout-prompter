@@ -4,8 +4,9 @@ from unittest.mock import patch
 
 import pytest
 from langchain_core.runnables import RunnableConfig
-from layout_prompter.utils.configuration import Configuration
 from pydantic import Field
+
+from layout_prompter.utils.configuration import Configuration
 
 
 class MockConfiguration(Configuration):

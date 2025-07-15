@@ -75,7 +75,7 @@ def load_poster_layout(
             labels = np.array(list(map(id2label, anns["cls_elem"])))
             assert len(bboxes) == len(labels)
 
-            # Convert bboxes to [x, y, w, h] format
+            # Convert bboxes to (left, top, width, height) format
             bboxes[:, 2] -= bboxes[:, 0]
             bboxes[:, 3] -= bboxes[:, 1]
 

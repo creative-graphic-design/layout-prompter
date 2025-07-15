@@ -139,11 +139,11 @@ def test_rico25_serialized_data():
     """Rico25SerializedDataクラスのテスト"""
     # インスタンス作成のテスト
     serialized_data = Rico25SerializedData(
-        class_name="text", bbox=Bbox(left=10, top=20, width=30, height=40)
+        class_name="Text", bbox=Bbox(left=10, top=20, width=30, height=40)
     )
 
     # 属性が正しく設定されていることを確認
-    assert serialized_data.class_name == "text"
+    assert serialized_data.class_name == "Text"
     assert serialized_data.bbox.left == 10
     assert serialized_data.bbox.top == 20
     assert serialized_data.bbox.width == 30
@@ -151,39 +151,39 @@ def test_rico25_serialized_data():
 
     # 異なるクラス名でのテスト
     serialized_data2 = Rico25SerializedData(
-        class_name="image", bbox=Bbox(left=5, top=15, width=25, height=35)
+        class_name="Image", bbox=Bbox(left=5, top=15, width=25, height=35)
     )
-    assert serialized_data2.class_name == "image"
+    assert serialized_data2.class_name == "Image"
 
 
 def test_rico25_serialized_data_all_valid_classes():
     """Rico25SerializedDataの全ての有効なクラス名のテスト"""
     valid_classes = [
-        "text",
-        "image",
-        "icon",
-        "list-item",
-        "text-button",
-        "toolbar",
-        "web-view",
-        "input",
-        "card",
-        "advertisement",
-        "background-image",
-        "drawer",
-        "radio-button",
-        "checkbox",
-        "multi-tab",
-        "pager-indicator",
-        "modal",
-        "on/off-switch",
-        "slider",
-        "map-view",
-        "button-bar",
-        "video",
-        "bottom-navigation",
-        "number-stepper",
-        "date-picker",
+        "Text",
+        "Image",
+        "Icon",
+        "Text Button",
+        "List Item",
+        "Input",
+        "Background Image",
+        "Card",
+        "Web View",
+        "Radio Button",
+        "Drawer",
+        "Checkbox",
+        "Advertisement",
+        "Modal",
+        "Pager Indicator",
+        "Slider",
+        "On/Off Switch",
+        "Button Bar",
+        "Toolbar",
+        "Number Stepper",
+        "Multi-Tab",
+        "Date Picker",
+        "Map View",
+        "Video",
+        "Bottom Navigation",
     ]
 
     for class_name in valid_classes:
@@ -214,10 +214,10 @@ def test_rico25_serialized_output_data():
     """Rico25SerializedOutputDataクラスのテスト"""
     # テスト用のRico25SerializedDataインスタンスを作成
     data1 = Rico25SerializedData(
-        class_name="text", bbox=Bbox(left=10, top=20, width=30, height=40)
+        class_name="Text", bbox=Bbox(left=10, top=20, width=30, height=40)
     )
     data2 = Rico25SerializedData(
-        class_name="image", bbox=Bbox(left=50, top=60, width=70, height=80)
+        class_name="Image", bbox=Bbox(left=50, top=60, width=70, height=80)
     )
 
     # Rico25SerializedOutputDataインスタンスの作成
@@ -225,8 +225,8 @@ def test_rico25_serialized_output_data():
 
     # 属性が正しく設定されていることを確認
     assert len(output_data.layouts) == 2
-    assert output_data.layouts[0].class_name == "text"
-    assert output_data.layouts[1].class_name == "image"
+    assert output_data.layouts[0].class_name == "Text"
+    assert output_data.layouts[1].class_name == "Image"
     assert output_data.layouts[0].bbox.to_ltwh() == (10, 20, 30, 40)
     assert output_data.layouts[1].bbox.to_ltwh() == (50, 60, 70, 80)
 
@@ -239,7 +239,7 @@ def test_rico25_serialized_output_data_edge_cases():
 
     # 多数のレイアウトでのテスト
     many_layouts = []
-    valid_classes = ["text", "image", "icon", "list-item", "text-button"]
+    valid_classes = ["Text", "Image", "Icon", "Text Button", "List Item"]
 
     for i in range(100):
         many_layouts.append(
@@ -251,9 +251,9 @@ def test_rico25_serialized_output_data_edge_cases():
 
     large_output_data = Rico25SerializedOutputData(layouts=many_layouts)
     assert len(large_output_data.layouts) == 100
-    assert large_output_data.layouts[0].class_name == "text"
-    assert large_output_data.layouts[1].class_name == "image"
-    assert large_output_data.layouts[2].class_name == "icon"
+    assert large_output_data.layouts[0].class_name == "Text"
+    assert large_output_data.layouts[1].class_name == "Image"
+    assert large_output_data.layouts[2].class_name == "Icon"
 
 
 def test_generic_serialized_data():
@@ -299,7 +299,7 @@ def test_type_compatibility():
         class_name="text", bbox=Bbox(left=10, top=20, width=30, height=40)
     )
     rico_data = Rico25SerializedData(
-        class_name="image", bbox=Bbox(left=50, top=60, width=70, height=80)
+        class_name="Image", bbox=Bbox(left=50, top=60, width=70, height=80)
     )
 
     # 基底型として参照できることを確認
@@ -307,13 +307,13 @@ def test_type_compatibility():
     base_rico: LayoutSerializedData = rico_data
 
     assert base_poster.class_name == "text"
-    assert base_rico.class_name == "image"
+    assert base_rico.class_name == "Image"
 
     # Generic の出力データでも互換性があることを確認
     mixed_output = LayoutSerializedOutputData(layouts=[poster_data, rico_data])
     assert len(mixed_output.layouts) == 2
     assert mixed_output.layouts[0].class_name == "text"
-    assert mixed_output.layouts[1].class_name == "image"
+    assert mixed_output.layouts[1].class_name == "Image"
 
 
 def test_inheritance_structure():
@@ -323,7 +323,7 @@ def test_inheritance_structure():
         class_name="text", bbox=Bbox(left=10, top=20, width=30, height=40)
     )
     rico_data = Rico25SerializedData(
-        class_name="image", bbox=Bbox(left=50, top=60, width=70, height=80)
+        class_name="Image", bbox=Bbox(left=50, top=60, width=70, height=80)
     )
 
     # isinstance での型チェック
@@ -354,7 +354,7 @@ def test_class_name_validation():
         assert data.class_name == name
 
     # Rico25SerializedData は特定のクラス名のみ受け入れる
-    valid_rico_names = ["text", "image", "icon"]
+    valid_rico_names = ["Text", "Image", "Icon"]
     for name in valid_rico_names:
         data = Rico25SerializedData(
             class_name=name, bbox=Bbox(left=10, top=20, width=30, height=40)
@@ -369,7 +369,7 @@ def test_output_data_flexibility():
         class_name="text", bbox=Bbox(left=10, top=20, width=30, height=40)
     )
     rico_data = Rico25SerializedData(
-        class_name="image", bbox=Bbox(left=50, top=60, width=70, height=80)
+        class_name="Image", bbox=Bbox(left=50, top=60, width=70, height=80)
     )
     generic_data = LayoutSerializedData(
         class_name="custom", bbox=Bbox(left=100, top=120, width=130, height=140)
@@ -381,7 +381,7 @@ def test_output_data_flexibility():
     )
     assert len(mixed_output.layouts) == 3
     assert mixed_output.layouts[0].class_name == "text"
-    assert mixed_output.layouts[1].class_name == "image"
+    assert mixed_output.layouts[1].class_name == "Image"
     assert mixed_output.layouts[2].class_name == "custom"
 
     # 専用の出力データクラスでは同じ種類のみ
@@ -391,7 +391,7 @@ def test_output_data_flexibility():
 
     rico_output = Rico25SerializedOutputData(layouts=[rico_data])
     assert len(rico_output.layouts) == 1
-    assert rico_output.layouts[0].class_name == "image"
+    assert rico_output.layouts[0].class_name == "Image"
 
 
 def test_backward_compatibility():

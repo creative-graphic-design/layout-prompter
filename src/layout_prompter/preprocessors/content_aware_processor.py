@@ -32,20 +32,20 @@ class ContentAwareProcessor(Processor):
     # During testing, randomly sample from this group for generation.
     _possible_labels: Tuple[Tuple[str, ...], ...] = tuple()  # type: ignore[assignment]
 
-    def _invoke(
+    def invoke(
         self,
-        layout_data: LayoutData,
+        input: LayoutData,
         config: Optional[RunnableConfig] = None,
         **kwargs,
     ) -> ProcessedLayoutData:
         conf = ContentAwareProcessorConfig.from_runnable_config(config)
 
-        assert isinstance(layout_data, LayoutData), (
-            f"Input must be of type LayoutData. Got: {type(layout_data)=}. "
+        assert isinstance(input, LayoutData), (
+            f"Input must be of type LayoutData. Got: {type(input)=}. "
             "If you want to preprocess multiple LayoutData (i.e., List[LayoutData]), "
             "please use the .batch method."
         )
-        bboxes, labels = layout_data.bboxes, layout_data.labels
+        bboxes, labels = input.bboxes, input.labels
         is_train = bboxes is not None and labels is not None
 
         if is_train:
@@ -75,15 +75,13 @@ class ContentAwareProcessor(Processor):
             ]
 
             # Overwrite layout_data with the new bboxes and labels
-            layout_data = layout_data.model_copy(
-                update={"bboxes": bboxes, "labels": labels}
-            )
+            input = input.model_copy(update={"bboxes": bboxes, "labels": labels})
 
         # Define the chain of preprocess transformations
         chain = LexicographicSort() | LabelDictSort()
 
         # Execute the transformations
-        processed_layout_data = chain.invoke(layout_data, config=config)
+        processed_layout_data = chain.invoke(input, config=config)
         assert isinstance(processed_layout_data, ProcessedLayoutData)
 
         return processed_layout_data
