@@ -1,5 +1,5 @@
 import json
-from typing import Any, Final, Optional, Type
+from typing import Any, Final, Optional
 
 from langchain_core.prompt_values import ChatPromptValue
 from langchain_core.prompts import (
@@ -12,16 +12,14 @@ from langchain_core.runnables.config import RunnableConfig
 from loguru import logger
 
 from layout_prompter.models import (
+    LayoutSerializedData,
     ProcessedLayoutData,
 )
 
 from .base import LayoutSerializer, LayoutSerializerConfig, LayoutSerializerInput
 
-CONTENT_AWARE_CONSTRAINT: Final[str] = """\
+GEN_TYPE_CONSTRAINT: Final[str] = """\
 # Constraints
-## Content Constraint
-{content_constraint}
-
 ## Element Type Constraint
 {type_constraint}
 
@@ -31,19 +29,9 @@ SERIALIZED_LAYOUT: Final[str] = """\
 {serialized_layout}"""
 
 
-class ContentAwareSerializer(LayoutSerializer):
-    task_type: str = (
-        "content-aware layout generation\n"
-        "Please place the following elements to avoid salient content, and underlay must be the background of text or logo."
-    )
-    name: str = "content-aware-serializer"
-
-    def _get_content_constraint(self, data: ProcessedLayoutData) -> str:
-        content_bboxes = data.discrete_content_bboxes
-        assert content_bboxes is not None
-
-        content_constraint = json.dumps([bbox.model_dump() for bbox in content_bboxes])
-        return self._convert_to_double_bracket(content_constraint)
+class GenTypeSerializer(LayoutSerializer):
+    task_type: str = "generation conditioned on given element types"
+    name: str = "gen-type-serializer"
 
     def _get_type_constraint(self, data: ProcessedLayoutData) -> str:
         assert data.labels is not None
@@ -57,26 +45,23 @@ class ContentAwareSerializer(LayoutSerializer):
         input: LayoutSerializerInput,
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
-    ) -> ChatPromptValue:
-        logger.debug(f"Invoking ContentAwareSerializer with input: {input}")
-
+    ) -> Any:
         conf = LayoutSerializerConfig.from_runnable_config(config)
 
         example_prompt = ChatPromptTemplate.from_messages(
             [
-                CONTENT_AWARE_CONSTRAINT,
+                GEN_TYPE_CONSTRAINT,
                 SERIALIZED_LAYOUT,
             ]
         )
         example_prompt = ChatPromptTemplate.from_messages(
             [
-                ("human", CONTENT_AWARE_CONSTRAINT),
+                ("human", GEN_TYPE_CONSTRAINT),
                 ("ai", SERIALIZED_LAYOUT),
             ]
         )
         examples = [
             {
-                "content_constraint": self._get_content_constraint(candidate),
                 "type_constraint": self._get_type_constraint(candidate),
                 "serialized_layout": self._get_serialized_layout(
                     candidate, schema=conf.input_schema
@@ -93,7 +78,7 @@ class ContentAwareSerializer(LayoutSerializer):
             template=self.system_prompt,
         )
         human_prompt = HumanMessagePromptTemplate.from_template(
-            template=CONTENT_AWARE_CONSTRAINT
+            template=GEN_TYPE_CONSTRAINT
         )
 
         prompt = ChatPromptTemplate.from_messages(
@@ -110,7 +95,6 @@ class ContentAwareSerializer(LayoutSerializer):
                 "canvas_height": input.query.canvas_size.height,
                 "task_description": self.task_type,
                 "layout_domain": self.layout_domain,
-                "content_constraint": self._get_content_constraint(input.query),
                 "type_constraint": self._get_type_constraint(input.query),
             }
         )

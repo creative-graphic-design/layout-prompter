@@ -1,6 +1,9 @@
-from typing import Final, List, Type
+import abc
+import json
+from typing import Any, Final, List, Optional, Type
 
 from langchain_core.runnables import RunnableSerializable
+from langchain_core.runnables.config import RunnableConfig
 from pydantic import BaseModel, Field
 
 from layout_prompter.models import (
@@ -68,3 +71,27 @@ class LayoutSerializer(RunnableSerializable):
         Here, we will temporarily deal with this by escaping { and } into {{ and }}, referring to https://github.com/langchain-ai/langchain/issues/4367#issuecomment-1557528059.
         """
         return s.replace("{", "{{").replace("}", "}}")
+
+    def _get_serialized_layout(
+        self,
+        data: ProcessedLayoutData,
+        schema: Type[LayoutSerializedData],
+    ) -> str:
+        assert data.labels is not None and data.discrete_bboxes is not None
+
+        labels, discrete_gold_bboxes = data.labels, data.discrete_bboxes
+
+        serialized_data_list = [
+            schema(class_name=class_name, bbox=bbox)
+            for class_name, bbox in zip(labels, discrete_gold_bboxes)
+        ]
+        return json.dumps([d.model_dump() for d in serialized_data_list])
+
+    @abc.abstractmethod
+    def invoke(
+        self,
+        input: LayoutSerializerInput,
+        config: Optional[RunnableConfig] = None,
+        **kwargs: Any,
+    ) -> Any:
+        return super().invoke(input, config, **kwargs)
