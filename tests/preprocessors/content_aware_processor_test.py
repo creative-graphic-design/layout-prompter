@@ -1,5 +1,6 @@
 import datasets as ds
 import pytest
+from pytest_lazy_fixtures import lf
 
 from layout_prompter.models import CanvasSize, LayoutData, NormalizedBbox
 from layout_prompter.preprocessors import ContentAwareProcessor
@@ -11,25 +12,32 @@ class TestContentAwareProcessor(LayoutPrompterTestCase):
     def num_proc(self) -> int:
         return 1  # Reduced for testing
 
-    def test_content_aware_processor(self, hf_dataset: ds.DatasetDict, num_proc: int):
+    @pytest.mark.parametrize(
+        argnames=("raw_layout_dataset"), argvalues=(lf("raw_poster_layout_dataset"),)
+    )
+    def test_content_aware_processor(
+        self,
+        raw_layout_dataset: ds.DatasetDict,
+        num_proc: int,
+    ):
         # Test with just a few samples to avoid timeout
         dataset = {
             split: [
                 LayoutData.model_validate(data)
-                for data in list(hf_dataset[split])[:2]  # Only take first 2 samples
+                for data in list(raw_layout_dataset[split])[
+                    :2
+                ]  # Only take first 2 samples
             ]
-            for split in hf_dataset
+            for split in raw_layout_dataset
         }
-        processor = ContentAwareProcessor(
-            target_canvas_size=CanvasSize(width=100, height=150)
-        )
+        processor = ContentAwareProcessor()
 
         # Process each split separately since batch expects a list of LayoutData, not a dict
         processed_dataset = {}
         for split, layout_list in dataset.items():
             processed_list = processor.batch(
                 layout_list,
-                config={"configurable": {"num_proc": num_proc}},
+                config={"max_concurrency": num_proc},
             )
             processed_dataset[split] = processed_list
 
@@ -37,12 +45,8 @@ class TestContentAwareProcessor(LayoutPrompterTestCase):
 
     def test_content_aware_processor_hashable(self):
         """Test that ContentAwareProcessor is hashable"""
-        processor1 = ContentAwareProcessor(
-            target_canvas_size=CanvasSize(width=100, height=150)
-        )
-        processor2 = ContentAwareProcessor(
-            target_canvas_size=CanvasSize(width=100, height=150)
-        )
+        processor1 = ContentAwareProcessor()
+        processor2 = ContentAwareProcessor()
 
         # Test hashability
         processor_set = {processor1, processor2}
@@ -60,9 +64,7 @@ class TestContentAwareProcessor(LayoutPrompterTestCase):
 
     def test_content_aware_processor_immutable(self):
         """Test that ContentAwareProcessor is immutable (frozen)"""
-        processor = ContentAwareProcessor(
-            target_canvas_size=CanvasSize(width=100, height=150)
-        )
+        processor = ContentAwareProcessor()
 
         # Attempting to set attributes should raise an error
         with pytest.raises(Exception):  # ValidationError or similar
@@ -70,9 +72,7 @@ class TestContentAwareProcessor(LayoutPrompterTestCase):
 
     def test_content_aware_processor_possible_labels_tuple(self):
         """Test that _possible_labels is properly handled as tuple"""
-        processor = ContentAwareProcessor(
-            target_canvas_size=CanvasSize(width=100, height=150)
-        )
+        processor = ContentAwareProcessor()
 
         # Initially should be empty tuple
         assert processor._possible_labels == tuple()

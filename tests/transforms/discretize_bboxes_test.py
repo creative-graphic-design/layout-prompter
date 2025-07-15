@@ -3,16 +3,21 @@ import pytest
 from layout_prompter.models import (
     CanvasSize,
     LayoutData,
-    ProcessedLayoutData,
     NormalizedBbox,
+    ProcessedLayoutData,
 )
 from layout_prompter.transforms import DiscretizeBboxes
+from layout_prompter.utils.testing import LayoutPrompterTestCase
 
 
-class TestDiscretizeBboxes:
+class TestDiscretizeBboxes(LayoutPrompterTestCase):
+    @pytest.fixture
+    def target_canvas_size(self) -> CanvasSize:
+        return CanvasSize(width=100, height=150)
+
     @pytest.fixture
     def discretizer(self) -> DiscretizeBboxes:
-        return DiscretizeBboxes(target_canvas_size=CanvasSize(width=100, height=150))
+        return DiscretizeBboxes()
 
     @pytest.fixture
     def sample_layout_data(self) -> LayoutData:
@@ -47,9 +52,17 @@ class TestDiscretizeBboxes:
         )
 
     def test_invoke_with_layout_data(
-        self, discretizer: DiscretizeBboxes, sample_layout_data: LayoutData
+        self,
+        discretizer: DiscretizeBboxes,
+        sample_layout_data: LayoutData,
+        target_canvas_size: CanvasSize,
     ):
-        result = discretizer.invoke(sample_layout_data)
+        result = discretizer.invoke(
+            sample_layout_data,
+            config={
+                "configurable": {"target_canvas_size": target_canvas_size},
+            },
+        )
 
         # Check that it returns ProcessedLayoutData
         assert isinstance(result, ProcessedLayoutData)
@@ -67,7 +80,7 @@ class TestDiscretizeBboxes:
         assert result.orig_canvas_size == sample_layout_data.canvas_size
 
         # Check that canvas_size is updated to target
-        assert result.canvas_size == discretizer.target_canvas_size
+        assert result.canvas_size == target_canvas_size
 
         # Check that discrete values are generated
         assert result.discrete_bboxes is not None
@@ -77,9 +90,17 @@ class TestDiscretizeBboxes:
         assert result.discrete_content_bboxes is not None
 
     def test_invoke_with_processed_data(
-        self, discretizer: DiscretizeBboxes, sample_processed_data: ProcessedLayoutData
+        self,
+        discretizer: DiscretizeBboxes,
+        sample_processed_data: ProcessedLayoutData,
+        target_canvas_size: CanvasSize,
     ):
-        result = discretizer.invoke(sample_processed_data)
+        result = discretizer.invoke(
+            sample_processed_data,
+            config={
+                "configurable": {"target_canvas_size": target_canvas_size},
+            },
+        )
 
         # Check that it returns ProcessedLayoutData
         assert isinstance(result, ProcessedLayoutData)
@@ -96,13 +117,15 @@ class TestDiscretizeBboxes:
         assert result.orig_canvas_size == sample_processed_data.orig_canvas_size
 
         # Check that canvas_size is updated to target
-        assert result.canvas_size == discretizer.target_canvas_size
+        assert result.canvas_size == target_canvas_size
 
         # Check that discrete values are generated
         assert result.discrete_bboxes is not None
         assert result.discrete_gold_bboxes is not None
 
-    def test_invoke_without_content_bboxes(self, discretizer: DiscretizeBboxes):
+    def test_invoke_without_content_bboxes(
+        self, discretizer: DiscretizeBboxes, target_canvas_size: CanvasSize
+    ):
         layout_data = LayoutData(
             idx=0,
             bboxes=[NormalizedBbox(left=0.1, top=0.2, width=0.3, height=0.4)],
@@ -112,13 +135,20 @@ class TestDiscretizeBboxes:
             content_bboxes=None,
         )
 
-        result = discretizer.invoke(layout_data)
+        result = discretizer.invoke(
+            layout_data,
+            config={
+                "configurable": {"target_canvas_size": target_canvas_size},
+            },
+        )
 
         # Should handle None content_bboxes gracefully
         assert result.discrete_content_bboxes is None
         assert result.content_bboxes is None
 
-    def test_discretization_values(self, discretizer: DiscretizeBboxes):
+    def test_discretization_values(
+        self, discretizer: DiscretizeBboxes, target_canvas_size: CanvasSize
+    ):
         """Test that discretization produces expected pixel values"""
         layout_data = LayoutData(
             idx=0,
@@ -134,7 +164,12 @@ class TestDiscretizeBboxes:
             content_bboxes=None,
         )
 
-        result = discretizer.invoke(layout_data)
+        result = discretizer.invoke(
+            layout_data,
+            config={
+                "configurable": {"target_canvas_size": target_canvas_size},
+            },
+        )
 
         # Check discrete bboxes have correct pixel values
         discrete_bboxes = result.discrete_bboxes
@@ -154,7 +189,9 @@ class TestDiscretizeBboxes:
         assert second_bbox.width == 30  # 0.3 * 100
         assert second_bbox.height == 60  # 0.4 * 150
 
-    def test_invalid_input_no_bboxes(self, discretizer: DiscretizeBboxes):
+    def test_invalid_input_no_bboxes(
+        self, discretizer: DiscretizeBboxes, target_canvas_size: CanvasSize
+    ):
         """Test that missing bboxes raises an assertion error"""
         layout_data = LayoutData(
             idx=0,
@@ -166,9 +203,16 @@ class TestDiscretizeBboxes:
         )
 
         with pytest.raises(AssertionError):
-            discretizer.invoke(layout_data)
+            discretizer.invoke(
+                layout_data,
+                config={
+                    "configurable": {"target_canvas_size": target_canvas_size},
+                },
+            )
 
-    def test_invalid_input_no_labels(self, discretizer: DiscretizeBboxes):
+    def test_invalid_input_no_labels(
+        self, discretizer: DiscretizeBboxes, target_canvas_size: CanvasSize
+    ):
         """Test that missing labels raises an assertion error"""
         layout_data = LayoutData(
             idx=0,
@@ -180,4 +224,9 @@ class TestDiscretizeBboxes:
         )
 
         with pytest.raises(AssertionError):
-            discretizer.invoke(layout_data)
+            discretizer.invoke(
+                layout_data,
+                config={
+                    "configurable": {"target_canvas_size": target_canvas_size},
+                },
+            )
