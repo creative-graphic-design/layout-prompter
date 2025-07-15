@@ -70,7 +70,7 @@ def main(args: argparse.Namespace) -> None:
         for split in hf_dataset
     }
 
-    processor = ContentAwareProcessor(target_canvas_size=settings.canvas_size)
+    processor = ContentAwareProcessor()
     candidate_examples = cast(
         List[ProcessedLayoutData],
         processor.batch(

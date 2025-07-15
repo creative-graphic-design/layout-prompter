@@ -3,7 +3,6 @@ from typing import Dict, List, Type, cast
 import pytest
 from langchain.chat_models import init_chat_model
 from langchain.smith.evaluation.progress import ProgressBarCallback
-
 from layout_prompter import LayoutPrompter
 from layout_prompter.models import (
     LayoutData,
@@ -20,12 +19,15 @@ from layout_prompter.modules import (
     ContentAwareSerializer,
     LayoutPrompterRanker,
 )
-from layout_prompter.preprocessors import ContentAwareProcessor
+from layout_prompter.preprocessors import ContentAwareProcessor, GenTypeProcessor
 from layout_prompter.settings import PosterLayoutSettings, Rico25Settings, TaskSettings
+from layout_prompter.transforms import DiscretizeBboxes
 from layout_prompter.typehints import PilImage
 from layout_prompter.utils import get_num_workers
 from layout_prompter.utils.testing import LayoutPrompterTestCase
 from layout_prompter.visualizers import ContentAwareVisualizer
+from loguru import logger
+from pytest_lazy_fixtures import lf
 
 
 class TestLayoutPrompter(LayoutPrompterTestCase):
@@ -46,16 +48,17 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
         return "gpt-4o"
 
     @pytest.mark.parametrize(
-        argnames=("settings", "input_schema", "output_schema"),
+        argnames=("layout_dataset", "settings", "input_schema", "output_schema"),
         argvalues=(
             (
+                lf("rico25_dataset"),
                 Rico25Settings(),
                 Rico25SerializedData,
                 Rico25SerializedOutputData,
             ),
         ),
     )
-    def test_content_agnostic_generation(
+    def test_gen_type_task(
         self,
         layout_dataset: Dict[str, List[LayoutData]],
         num_prompt: int,
@@ -66,12 +69,30 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
         input_schema: Type[LayoutSerializedData],
         output_schema: Type[LayoutSerializedOutputData],
     ):
+        # tng_dataset = layout_dataset["train"]
+        # val_dataset = layout_dataset["validation"]
+        # tst_dataset = layout_dataset["test"]
+
+        # processor = GenTypeProcessor()
+
+        # examples = cast(
+        #     List[ProcessedLayoutData],
+        #     processor.batch(
+        #         inputs=tng_dataset,
+        #         # config={
+        #         #     "max_concurrency": 4,
+        #         # },
+        #     ),
+        # )
+
+        # breakpoint()
         pass
 
     @pytest.mark.parametrize(
-        argnames=("settings", "input_schema", "output_schema"),
+        argnames=("layout_dataset", "settings", "input_schema", "output_schema"),
         argvalues=(
             (
+                lf("poster_layout_dataset"),
                 PosterLayoutSettings(),
                 PosterLayoutSerializedData,
                 PosterLayoutSerializedOutputData,
@@ -93,14 +114,20 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
         tst_dataset = layout_dataset["test"]
 
         # Define the content-aware processor and process the data for candidates
-        processor = ContentAwareProcessor(target_canvas_size=settings.canvas_size)
+        processor = ContentAwareProcessor()
+        # Define the discretizer for bounding boxes
+        bbox_discretizer = DiscretizeBboxes()
+
+        # Define the processor chain
+        processor_chain = processor | bbox_discretizer
 
         # Process the training dataset to get candidate examples
         examples = cast(
             List[ProcessedLayoutData],
-            processor.batch(
+            processor_chain.batch(
                 inputs=tng_dataset,
                 config={
+                    "configurable": {"target_canvas_size": settings.canvas_size},
                     "max_concurrency": get_num_workers(max_concurrency=4),
                     "callbacks": [ProgressBarCallback(total=len(tng_dataset))],
                 },
@@ -114,7 +141,15 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
 
         # Process the test data
         processed_test_data = cast(
-            ProcessedLayoutData, processor.invoke(input=test_data)
+            ProcessedLayoutData,
+            processor_chain.invoke(
+                input=test_data,
+                config={
+                    "configurable": {
+                        "target_canvas_size": settings.canvas_size,
+                    },
+                },
+            ),
         )
 
         # Define the LayoutPrompter
@@ -125,21 +160,23 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
             ),
             serializer=ContentAwareSerializer(
                 layout_domain=settings.domain,
-                schema=input_schema,
             ),
             llm=init_chat_model(
                 model_provider=model_provider,
                 model=model_id,
             ),
             ranker=LayoutPrompterRanker(),
-            schema=output_schema,
         )
 
         # Invoke the LayoutPrompter to generate layouts
         output = layout_prompter.invoke(
             input=processed_test_data,
             config={
-                "configurable": {"num_return": num_return},
+                "configurable": {
+                    "input_schema": input_schema,
+                    "output_schema": output_schema,
+                    "num_return": num_return,
+                },
             },
         )
 

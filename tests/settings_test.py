@@ -62,13 +62,18 @@ def test_poster_layout_settings():
     assert settings.labels == expected_labels
 
 
-def test_poster_layout_settings_with_dataset(raw_hf_dataset: ds.DatasetDict):
+def test_poster_layout_settings_with_dataset(
+    raw_hf_poster_layout_dataset: ds.DatasetDict,
+):
     """Test PosterLayoutSettings against actual dataset"""
     settings = PosterLayoutSettings()
 
     # Check if the labels in the settings are the same as in the dataset
     actual_labels = (
-        raw_hf_dataset["train"].features["annotations"].feature["cls_elem"].names
+        raw_hf_poster_layout_dataset["train"]
+        .features["annotations"]
+        .feature["cls_elem"]
+        .names
     )
     actual_labels = list(filter(lambda label: label != "INVALID", actual_labels))
     assert actual_labels == settings.labels

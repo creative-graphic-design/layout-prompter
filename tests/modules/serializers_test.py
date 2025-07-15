@@ -2,8 +2,6 @@ from typing import Dict, List, Type, cast
 
 import pytest
 from langchain.smith.evaluation.progress import ProgressBarCallback
-from pytest_lazy_fixtures import lf
-
 from layout_prompter.models import (
     LayoutData,
     LayoutSerializedData,
@@ -20,6 +18,7 @@ from layout_prompter.settings import PosterLayoutSettings, TaskSettings
 from layout_prompter.transforms import DiscretizeBboxes
 from layout_prompter.utils import get_num_workers
 from layout_prompter.utils.testing import LayoutPrompterTestCase
+from pytest_lazy_fixtures import lf
 
 
 class TestContentAwareSerializer(LayoutPrompterTestCase):
@@ -77,13 +76,17 @@ class TestContentAwareSerializer(LayoutPrompterTestCase):
 
         serializer = ContentAwareSerializer(
             layout_domain=settings.domain,
-            schema=input_schema,
         )
         prompt = serializer.invoke(
             input=LayoutSerializerInput(
                 query=processed_test_data,
                 candidates=selector_output.selected_examples,
-            )
+            ),
+            config={
+                "configurable": {
+                    "input_schema": input_schema,
+                }
+            },
         )
         for message in prompt.to_messages():
             message.pretty_print()
