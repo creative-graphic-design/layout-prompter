@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.7.0](https://github.com/creative-graphic-design/layout-prompter/compare/v0.6.0...v0.7.0) - 2025-07-15
+- fix: update license type from MIT to Apache Software License in pypro… by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/33
+- feat: refactor layout components to use RunnableSerializable and enha… by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/31
+- feat: prepare to add content agnostic layout generation by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/35
+
 ## [v0.6.0](https://github.com/creative-graphic-design/layout-prompter/compare/v0.5.0...v0.6.0) - 2025-07-15
 - feat: lazy discretization by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/29
 - feat: update version to 0.6.0 in pyproject.toml and uv.lock by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/32
