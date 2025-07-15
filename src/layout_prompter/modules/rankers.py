@@ -1,9 +1,10 @@
+import abc
 from typing import Any, List, Optional, Tuple
 
 import numpy as np
-from langchain_core.runnables import Runnable
+from langchain_core.runnables import RunnableSerializable
 from langchain_core.runnables.config import RunnableConfig
-from pydantic import BaseModel, model_validator
+from pydantic import model_validator
 from typing_extensions import Self
 
 from layout_prompter.models import LayoutSerializedOutputData
@@ -13,9 +14,10 @@ from layout_prompter.utils import (
 )
 
 
-class LayoutRanker(Runnable):
+class LayoutRanker(RunnableSerializable):
     """Base class for layout ranking algorithms."""
 
+    @abc.abstractmethod
     def invoke(
         self,
         input: List[LayoutSerializedOutputData],
@@ -25,7 +27,7 @@ class LayoutRanker(Runnable):
         raise NotImplementedError
 
 
-class LayoutPrompterRanker(BaseModel, LayoutRanker):
+class LayoutPrompterRanker(LayoutRanker):
     name: str = "layout-prompter-ranker"
 
     lam_ali: float = 0.2

@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from functools import cached_property
 from typing import (
     Any,
@@ -10,7 +9,7 @@ from typing import (
 
 import pydantic_numpy.typing as pnd
 from langchain_core.language_models import BaseChatModel
-from langchain_core.runnables import Runnable
+from langchain_core.runnables import RunnableSerializable
 from langchain_core.runnables.config import RunnableConfig
 from PIL import Image
 from pydantic import BaseModel
@@ -30,6 +29,7 @@ from layout_prompter.utils import Configuration
 class LayoutPrompterConfiguration(Configuration):
     """Configuration for LayoutPrompter."""
 
+    output_schema: Type[LayoutSerializedOutputData]
     num_return: int = 10
     return_candidates: bool = False
     return_saliency_maps: bool = False
@@ -55,13 +55,11 @@ class LayoutPrompterOutput(BaseModel):
         ]
 
 
-@dataclass
-class LayoutPrompter(Runnable):
+class LayoutPrompter(RunnableSerializable):
     selector: LayoutSelector
     serializer: LayoutSerializer
     llm: BaseChatModel
     ranker: LayoutRanker
-    schema: Type[LayoutSerializedOutputData]
 
     def invoke(
         self,
@@ -85,14 +83,13 @@ class LayoutPrompter(Runnable):
         serializer_input = LayoutSerializerInput(query=input, candidates=candidates)
 
         # Construct the few-shot layout examples as prompt messages
-        messages = self.serializer.invoke(input=serializer_input)
+        messages = self.serializer.invoke(input=serializer_input, config=config)
+        batched_messages = [messages] * conf.num_return
 
         # Generate batched layouts
         outputs = cast(
             List[LayoutSerializedOutputData],
-            self.llm.with_structured_output(
-                schema=self.schema,
-            ).batch([messages] * conf.num_return),
+            self.llm.with_structured_output(conf.output_schema).batch(batched_messages),
         )
 
         # Rank the generated layouts
