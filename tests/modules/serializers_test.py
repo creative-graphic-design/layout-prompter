@@ -1,6 +1,8 @@
 from typing import Dict, List, Type, cast
 
 import pytest
+from langchain.smith.evaluation.progress import ProgressBarCallback
+from pytest_lazy_fixtures import lf
 
 from layout_prompter.models import (
     LayoutData,
@@ -15,18 +17,25 @@ from layout_prompter.modules.serializers import (
 )
 from layout_prompter.preprocessors import ContentAwareProcessor
 from layout_prompter.settings import PosterLayoutSettings, TaskSettings
+from layout_prompter.transforms import DiscretizeBboxes
+from layout_prompter.utils import get_num_workers
 from layout_prompter.utils.testing import LayoutPrompterTestCase
 
 
 class TestContentAwareSerializer(LayoutPrompterTestCase):
     @pytest.fixture
-    def processor(self, settings: TaskSettings) -> ContentAwareProcessor:
-        return ContentAwareProcessor(target_canvas_size=settings.canvas_size)
+    def processor(self) -> ContentAwareProcessor:
+        return ContentAwareProcessor()
+
+    @pytest.fixture
+    def bbox_discretizer(self) -> DiscretizeBboxes:
+        return DiscretizeBboxes()
 
     @pytest.mark.parametrize(
-        argnames=("settings", "input_schema"),
+        argnames=("layout_dataset", "settings", "input_schema"),
         argvalues=(
             (
+                lf("poster_layout_dataset"),
                 PosterLayoutSettings(),
                 PosterLayoutSerializedData,
             ),
@@ -36,23 +45,33 @@ class TestContentAwareSerializer(LayoutPrompterTestCase):
         self,
         layout_dataset: Dict[str, List[LayoutData]],
         processor: ContentAwareProcessor,
+        bbox_discretizer: DiscretizeBboxes,
         settings: TaskSettings,
         input_schema: Type[LayoutSerializedData],
     ):
         tng_dataset, tst_dataset = layout_dataset["train"], layout_dataset["test"]
 
+        processor_chain = processor | bbox_discretizer
+
         examples = cast(
             List[ProcessedLayoutData],
-            processor.batch(inputs=tng_dataset),
+            processor_chain.batch(
+                inputs=tng_dataset,
+                config={
+                    "configurable": {"target_canvas_size": settings.canvas_size},
+                    "max_concurrency": get_num_workers(max_concurrency=4),
+                    "callbacks": [ProgressBarCallback(total=len(tng_dataset))],
+                },
+            ),
         )
-        selector = ContentAwareSelector(
-            canvas_size=settings.canvas_size,
-            examples=examples,
-        )
+        selector = ContentAwareSelector(examples=examples)
 
-        tst_data = tst_dataset[0]
         processed_test_data = cast(
-            ProcessedLayoutData, processor.invoke(input=tst_data)
+            ProcessedLayoutData,
+            processor_chain.invoke(
+                input=tst_dataset[0],
+                config={"configurable": {"target_canvas_size": settings.canvas_size}},
+            ),
         )
         selector_output = selector.select_examples(processed_test_data)
 
