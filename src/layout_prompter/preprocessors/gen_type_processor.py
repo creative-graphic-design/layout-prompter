@@ -5,7 +5,6 @@ from langchain_core.runnables.config import RunnableConfig
 from layout_prompter.models import ProcessedLayoutData
 from layout_prompter.models.layout_data import LayoutData
 from layout_prompter.transforms import (
-    DiscretizeBboxes,
     LabelDictSort,
     LexicographicSort,
 )
@@ -23,11 +22,7 @@ class GenTypeProcessor(Processor):
         **kwargs,
     ) -> ProcessedLayoutData:
         # Define the chain of preprocess transformations
-        chain = (
-            LexicographicSort()
-            | LabelDictSort()
-            | DiscretizeBboxes(target_canvas_size=self.target_canvas_size)
-        )
+        chain = LexicographicSort() | LabelDictSort()
 
         # Invoke the chain with the provided layout data
         processed_layout_data = chain.invoke(layout_data)

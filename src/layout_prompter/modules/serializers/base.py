@@ -94,4 +94,4 @@ class LayoutSerializer(RunnableSerializable):
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
     ) -> Any:
-        return super().invoke(input, config, **kwargs)
+        raise NotImplementedError
