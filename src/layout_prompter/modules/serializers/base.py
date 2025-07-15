@@ -1,16 +1,6 @@
-import json
-from typing import Any, Final, List, Optional, Type
+from typing import Final, List, Type
 
-from langchain_core.prompt_values import ChatPromptValue
-from langchain_core.prompts import (
-    ChatPromptTemplate,
-    FewShotChatMessagePromptTemplate,
-    HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
-)
 from langchain_core.runnables import RunnableSerializable
-from langchain_core.runnables.config import RunnableConfig
-from loguru import logger
 from pydantic import BaseModel, Field
 
 from layout_prompter.models import (
@@ -63,10 +53,6 @@ class LayoutSerializer(RunnableSerializable):
         description="System prompt to guide the layout generation.",
         default=SYSTEM_PROMPT,
     )
-
-    # constraint_template: str = Field(
-    #     description="Template for the content constraint.",
-    # )
 
     add_index_token: bool = True
     add_sep_token: bool = True
