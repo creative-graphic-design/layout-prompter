@@ -1,6 +1,6 @@
 [project]
 name = "layout-prompter"
-version = "0.6.0"
+version = "0.7.0"
 description = "LangChain-based LayoutPrompter for content-agnostic/content-aware layout generation powered by LLM."
 readme = "README.md"
 authors = [
