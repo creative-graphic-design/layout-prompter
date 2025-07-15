@@ -1,5 +1,4 @@
 import json
-from dataclasses import dataclass, field
 from typing import Any, Final, List, Optional, Type
 
 from langchain_core.prompt_values import ChatPromptValue
@@ -9,15 +8,16 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
     SystemMessagePromptTemplate,
 )
-from langchain_core.runnables import Runnable
+from langchain_core.runnables import RunnableSerializable
 from langchain_core.runnables.config import RunnableConfig
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from layout_prompter.models import (
     LayoutSerializedData,
     ProcessedLayoutData,
 )
+from layout_prompter.utils import Configuration
 
 UNK_TOKEN: Final[str] = "<unk>"
 
@@ -48,25 +48,27 @@ SERIALIZED_LAYOUT: Final[str] = """\
 {serialized_layout}"""
 
 
+class LayoutSerializerConfig(Configuration):
+    """Base class for all layout serializers."""
+
+    input_schema: Type[LayoutSerializedData]
+
+
 class LayoutSerializerInput(BaseModel):
+    """Input for the layout serializer."""
+
     query: ProcessedLayoutData
     candidates: List[ProcessedLayoutData]
 
 
-@dataclass
-class LayoutSerializer(Runnable):
-    task_type: Optional[str] = field(
-        default=None,
-        metadata={
-            "description": "Type of the task to be performed. This should be set in the subclass."
-        },
+class LayoutSerializer(RunnableSerializable):
+    task_type: str = Field(
+        description="Type of the task to be performed.",
     )
-    layout_domain: Optional[str] = field(
-        default=None,
-        metadata={
-            "description": 'Domain of the layout, e.g., "poster", "webpage". This should be set in the subclass.'
-        },
+    layout_domain: str = Field(
+        description="Domain of the layout, e.g., 'poster', 'webpage'.",
     )
+
     unk_token: Final[str] = UNK_TOKEN
 
     system_prompt: Final[str] = SYSTEM_PROMPT
@@ -75,17 +77,6 @@ class LayoutSerializer(Runnable):
     add_index_token: bool = True
     add_sep_token: bool = True
     add_unk_token: bool = False
-
-    schema: Optional[Type[LayoutSerializedData]] = None
-
-    def __post_init__(self) -> None:
-        assert self.task_type is not None, (
-            f"{self.task_type=} must be set in the subclass"
-        )
-        assert self.layout_domain is not None, (
-            f"{self.layout_domain=} must be set in the subclass"
-        )
-        assert self.schema is not None, f"{self.schema=} must be set in the subclass"
 
     def _convert_to_double_bracket(self, s: str) -> str:
         """Convert a string to double bracket format.
@@ -99,7 +90,6 @@ class LayoutSerializer(Runnable):
         return s.replace("{", "{{").replace("}", "}}")
 
 
-@dataclass
 class ContentAwareSerializer(LayoutSerializer):
     task_type: str = (
         "content-aware layout generation\n"
@@ -121,14 +111,17 @@ class ContentAwareSerializer(LayoutSerializer):
         )
         return self._convert_to_double_bracket(type_constraint)
 
-    def _get_serialized_layout(self, data: ProcessedLayoutData) -> str:
+    def _get_serialized_layout(
+        self,
+        data: ProcessedLayoutData,
+        schema: Type[LayoutSerializedData],
+    ) -> str:
         assert data.labels is not None and data.discrete_bboxes is not None
-        assert self.schema is not None, "Schema must be defined for serialization."
 
         labels, discrete_gold_bboxes = data.labels, data.discrete_bboxes
 
         serialized_data_list = [
-            self.schema(class_name=class_name, bbox=bbox)
+            schema(class_name=class_name, bbox=bbox)
             for class_name, bbox in zip(labels, discrete_gold_bboxes)
         ]
         return json.dumps([d.model_dump() for d in serialized_data_list])
@@ -140,6 +133,8 @@ class ContentAwareSerializer(LayoutSerializer):
         **kwargs: Any,
     ) -> ChatPromptValue:
         logger.debug(f"Invoking ContentAwareSerializer with input: {input}")
+
+        conf = LayoutSerializerConfig.from_runnable_config(config)
 
         example_prompt = ChatPromptTemplate.from_messages(
             [
@@ -157,7 +152,9 @@ class ContentAwareSerializer(LayoutSerializer):
             {
                 "content_constraint": self._get_content_constraint(candidate),
                 "type_constraint": self._get_type_constraint(candidate),
-                "serialized_layout": self._get_serialized_layout(candidate),
+                "serialized_layout": self._get_serialized_layout(
+                    candidate, schema=conf.input_schema
+                ),
             }
             for candidate in input.candidates
         ]
