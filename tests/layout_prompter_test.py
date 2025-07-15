@@ -3,6 +3,9 @@ from typing import Dict, List, Type, cast
 import pytest
 from langchain.chat_models import init_chat_model
 from langchain.smith.evaluation.progress import ProgressBarCallback
+from loguru import logger
+from pytest_lazy_fixtures import lf
+
 from layout_prompter import LayoutPrompter
 from layout_prompter.models import (
     LayoutData,
@@ -26,8 +29,6 @@ from layout_prompter.typehints import PilImage
 from layout_prompter.utils import get_num_workers
 from layout_prompter.utils.testing import LayoutPrompterTestCase
 from layout_prompter.visualizers import ContentAwareVisualizer
-from loguru import logger
-from pytest_lazy_fixtures import lf
 
 
 class TestLayoutPrompter(LayoutPrompterTestCase):
@@ -113,22 +114,18 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
         tng_dataset = layout_dataset["train"]
         tst_dataset = layout_dataset["test"]
 
+        target_canvas_size = settings.canvas_size
+
         # Define the content-aware processor and process the data for candidates
         processor = ContentAwareProcessor()
-        # Define the discretizer for bounding boxes
-        bbox_discretizer = DiscretizeBboxes()
-
-        # Define the processor chain
-        processor_chain = processor | bbox_discretizer
 
         # Process the training dataset to get candidate examples
-        examples = cast(
+        candidate_examples = cast(
             List[ProcessedLayoutData],
-            processor_chain.batch(
+            processor.batch(
                 inputs=tng_dataset,
                 config={
-                    "configurable": {"target_canvas_size": settings.canvas_size},
-                    "max_concurrency": get_num_workers(max_concurrency=4),
+                    # "max_concurrency": get_num_workers(max_concurrency=4),
                     "callbacks": [ProgressBarCallback(total=len(tng_dataset))],
                 },
             ),
@@ -140,23 +137,29 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
         test_data = tst_dataset[idx]
 
         # Process the test data
-        processed_test_data = cast(
-            ProcessedLayoutData,
-            processor_chain.invoke(
-                input=test_data,
-                config={
-                    "configurable": {
-                        "target_canvas_size": settings.canvas_size,
-                    },
-                },
+        processed_test_data = processor.invoke(input=test_data)
+
+        # Define the discretizer for bounding boxes
+        bbox_discretizer = DiscretizeBboxes()
+
+        # Apply the bbox discretizer to candidate examples and test data
+        candidate_examples = cast(
+            List[ProcessedLayoutData],
+            bbox_discretizer.batch(
+                candidate_examples,
+                config={"configurable": {"target_canvas_size": target_canvas_size}},
             ),
+        )
+        processed_test_data = bbox_discretizer.invoke(
+            processed_test_data,
+            config={"configurable": {"target_canvas_size": target_canvas_size}},
         )
 
         # Define the LayoutPrompter
         layout_prompter = LayoutPrompter(
             selector=ContentAwareSelector(
                 num_prompt=num_prompt,
-                examples=examples,
+                examples=candidate_examples,
             ),
             serializer=ContentAwareSerializer(
                 layout_domain=settings.domain,
@@ -182,7 +185,8 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
 
         # Define the visualizer
         visualizer = ContentAwareVisualizer(
-            canvas_size=settings.canvas_size, labels=settings.labels
+            canvas_size=settings.canvas_size,
+            labels=settings.labels,
         )
         visualizations = cast(
             List[PilImage],

@@ -44,32 +44,44 @@ class TestContentAwareSelector(LayoutPrompterTestCase):
         num_prompt: int,
     ):
         tng_dataset, tst_dataset = layout_dataset["train"], layout_dataset["test"]
+        target_canvas_size = settings.canvas_size
 
-        processor_chain = processor | bbox_discretizer
-
-        examples = cast(
+        # Perform preprocessing on candidate examples and inference example
+        candidate_examples = cast(
             List[ProcessedLayoutData],
-            processor_chain.batch(
+            processor.batch(
                 inputs=tng_dataset,
                 config={
-                    "configurable": {"target_canvas_size": settings.canvas_size},
+                    "configurable": {"target_canvas_size": target_canvas_size},
                     "max_concurrency": get_num_workers(max_concurrency=4),
                     "callbacks": [ProgressBarCallback(total=len(tng_dataset))],
                 },
             ),
         )
-
-        selector = ContentAwareSelector(examples=examples)
-
-        test_data = cast(
+        processed_test_data = cast(
             ProcessedLayoutData,
-            processor_chain.invoke(
-                input=tst_dataset[0],
+            processor.invoke(input=tst_dataset[0]),
+        )
+
+        # Apply the bbox discretizer to the candidate examples and the inference example
+        candidate_examples = cast(
+            List[ProcessedLayoutData],
+            bbox_discretizer.batch(
+                candidate_examples,
                 config={
-                    "configurable": {"target_canvas_size": settings.canvas_size},
+                    "configurable": {"target_canvas_size": target_canvas_size},
                 },
             ),
         )
-        candidates = selector.select_examples(test_data)
+        processed_test_data = bbox_discretizer.invoke(
+            processed_test_data,
+            config={
+                "configurable": {"target_canvas_size": target_canvas_size},
+            },
+        )
 
-        assert len(candidates.selected_examples) == num_prompt
+        # Perform selection using the ContentAwareSelector
+        selector = ContentAwareSelector(examples=candidate_examples)
+        selector_output = selector.select_examples(processed_test_data)
+
+        assert len(selector_output.selected_examples) == num_prompt
