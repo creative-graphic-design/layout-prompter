@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import datasets as ds
 import numpy as np
 from loguru import logger

@@ -7,7 +7,6 @@ from layout_prompter.models.layout_data import LayoutData
 from layout_prompter.transforms import (
     DiscretizeBboxes,
     LabelDictSort,
-    LexicographicSort,
     ShuffleElements,
 )
 
@@ -25,4 +24,5 @@ class GenTypeSizeProcessor(Processor):
             | LabelDictSort()
             | DiscretizeBboxes(target_canvas_size=self.target_canvas_size)
         )
+        chain
         breakpoint()

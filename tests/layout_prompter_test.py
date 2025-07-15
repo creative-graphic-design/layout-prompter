@@ -3,7 +3,6 @@ from typing import Dict, List, Type, cast
 import pytest
 from langchain.chat_models import init_chat_model
 from langchain.smith.evaluation.progress import ProgressBarCallback
-from loguru import logger
 from pytest_lazy_fixtures import lf
 
 from layout_prompter import LayoutPrompter
@@ -22,7 +21,7 @@ from layout_prompter.modules import (
     ContentAwareSerializer,
     LayoutPrompterRanker,
 )
-from layout_prompter.preprocessors import ContentAwareProcessor, GenTypeProcessor
+from layout_prompter.preprocessors import ContentAwareProcessor
 from layout_prompter.settings import PosterLayoutSettings, Rico25Settings, TaskSettings
 from layout_prompter.transforms import DiscretizeBboxes
 from layout_prompter.typehints import PilImage
@@ -125,7 +124,7 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
             processor.batch(
                 inputs=tng_dataset,
                 config={
-                    # "max_concurrency": get_num_workers(max_concurrency=4),
+                    "max_concurrency": get_num_workers(max_concurrency=4),
                     "callbacks": [ProgressBarCallback(total=len(tng_dataset))],
                 },
             ),

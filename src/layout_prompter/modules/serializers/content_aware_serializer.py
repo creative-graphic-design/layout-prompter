@@ -1,5 +1,5 @@
 import json
-from typing import Any, Final, Optional, Type
+from typing import Any, Final, Optional
 
 from langchain_core.prompt_values import ChatPromptValue
 from langchain_core.prompts import (
