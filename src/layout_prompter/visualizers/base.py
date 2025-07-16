@@ -107,5 +107,17 @@ class Visualizer(Runnable):
         input: Union[ProcessedLayoutData, LayoutSerializedOutputData],
         config: Optional[RunnableConfig] = None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> PilImage:
         raise NotImplementedError
+
+    def batch(
+        self,
+        inputs: Union[List[ProcessedLayoutData], List[LayoutSerializedOutputData]],
+        config: Optional[Union[RunnableConfig, List[RunnableConfig]]] = None,
+        *,
+        return_exceptions: bool = False,
+        **kwargs: Any | None,
+    ) -> List[PilImage]:
+        return super().batch(
+            inputs, config, return_exceptions=return_exceptions, **kwargs
+        )
