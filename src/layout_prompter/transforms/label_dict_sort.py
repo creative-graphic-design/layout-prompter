@@ -1,14 +1,15 @@
 import copy
 from typing import Any, List, Tuple, Union, cast
 
-from langchain_core.runnables import Runnable
 from langchain_core.runnables.config import RunnableConfig
 from loguru import logger
 
 from layout_prompter.models import LayoutData, NormalizedBbox, ProcessedLayoutData
 
+from .base import LayoutTransform
 
-class LabelDictSort(Runnable):
+
+class LabelDictSort(LayoutTransform):
     name: str = "label-dict-sort"
 
     def invoke(

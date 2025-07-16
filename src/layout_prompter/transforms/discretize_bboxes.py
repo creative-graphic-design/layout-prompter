@@ -1,12 +1,13 @@
 import copy
 from typing import Any, Optional, Union
 
-from langchain_core.runnables import RunnableSerializable
 from langchain_core.runnables.config import RunnableConfig
 from loguru import logger
 
 from layout_prompter.models import CanvasSize, LayoutData, ProcessedLayoutData
 from layout_prompter.utils import Configuration
+
+from .base import LayoutTransform
 
 
 class DiscretizeBboxesConfig(Configuration):
@@ -15,7 +16,7 @@ class DiscretizeBboxesConfig(Configuration):
     target_canvas_size: CanvasSize
 
 
-class DiscretizeBboxes(RunnableSerializable):
+class DiscretizeBboxes(LayoutTransform):
     name: str = "discretize-bboxes"
 
     def invoke(
