@@ -1,4 +1,4 @@
-from typing import Dict, List, Type, cast
+from typing import Dict, List, Type
 
 import pytest
 from langchain.chat_models import init_chat_model
@@ -12,7 +12,6 @@ from layout_prompter.models import (
     LayoutSerializedOutputData,
     PosterLayoutSerializedData,
     PosterLayoutSerializedOutputData,
-    ProcessedLayoutData,
     Rico25SerializedData,
     Rico25SerializedOutputData,
 )
@@ -24,7 +23,6 @@ from layout_prompter.modules import (
 from layout_prompter.preprocessors import ContentAwareProcessor
 from layout_prompter.settings import PosterLayoutSettings, Rico25Settings, TaskSettings
 from layout_prompter.transforms import DiscretizeBboxes
-from layout_prompter.typehints import PilImage
 from layout_prompter.utils import get_num_workers
 from layout_prompter.utils.testing import LayoutPrompterTestCase
 from layout_prompter.visualizers import ContentAwareVisualizer
@@ -69,24 +67,7 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
         input_schema: Type[LayoutSerializedData],
         output_schema: Type[LayoutSerializedOutputData],
     ):
-        # tng_dataset = layout_dataset["train"]
-        # val_dataset = layout_dataset["validation"]
-        # tst_dataset = layout_dataset["test"]
-
-        # processor = GenTypeProcessor()
-
-        # examples = cast(
-        #     List[ProcessedLayoutData],
-        #     processor.batch(
-        #         inputs=tng_dataset,
-        #         # config={
-        #         #     "max_concurrency": 4,
-        #         # },
-        #     ),
-        # )
-
-        # breakpoint()
-        pass
+        raise NotImplementedError
 
     @pytest.mark.parametrize(
         argnames=("layout_dataset", "settings", "input_schema", "output_schema"),
@@ -119,15 +100,12 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
         processor = ContentAwareProcessor()
 
         # Process the training dataset to get candidate examples
-        candidate_examples = cast(
-            List[ProcessedLayoutData],
-            processor.batch(
-                inputs=tng_dataset,
-                config={
-                    "max_concurrency": get_num_workers(max_concurrency=4),
-                    "callbacks": [ProgressBarCallback(total=len(tng_dataset))],
-                },
-            ),
+        candidate_examples = processor.batch(
+            inputs=tng_dataset,
+            config={
+                "max_concurrency": get_num_workers(max_concurrency=4),
+                "callbacks": [ProgressBarCallback(total=len(tng_dataset))],
+            },
         )
 
         # Select a random test example
@@ -142,13 +120,11 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
         bbox_discretizer = DiscretizeBboxes()
 
         # Apply the bbox discretizer to candidate examples and test data
-        candidate_examples = cast(
-            List[ProcessedLayoutData],
-            bbox_discretizer.batch(
-                candidate_examples,
-                config={"configurable": {"target_canvas_size": target_canvas_size}},
-            ),
+        candidate_examples = bbox_discretizer.batch(
+            candidate_examples,
+            config={"configurable": {"target_canvas_size": target_canvas_size}},
         )
+
         processed_test_data = bbox_discretizer.invoke(
             processed_test_data,
             config={"configurable": {"target_canvas_size": target_canvas_size}},
@@ -187,18 +163,16 @@ class TestLayoutPrompter(LayoutPrompterTestCase):
             canvas_size=settings.canvas_size,
             labels=settings.labels,
         )
-        visualizations = cast(
-            List[PilImage],
-            visualizer.batch(
-                inputs=output.ranked_outputs,
-                config={
-                    "configurable": {
-                        "resize_ratio": 2.0,
-                        "bg_image": test_data.content_image.copy(),
-                        "content_bboxes": processed_test_data.discrete_content_bboxes,
-                    }
-                },
-            ),
+        # Perform the visualization
+        visualizations = visualizer.batch(
+            inputs=output.ranked_outputs,
+            config={
+                "configurable": {
+                    "resize_ratio": 2.0,
+                    "bg_image": test_data.content_image.copy(),
+                    "content_bboxes": processed_test_data.discrete_content_bboxes,
+                }
+            },
         )
 
         # Create the save directory
