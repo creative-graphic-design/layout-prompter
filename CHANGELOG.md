@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.8.0](https://github.com/creative-graphic-design/layout-prompter/compare/v0.7.0...v0.8.0) - 2025-07-17
+- feat: organize base class by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/36
+- feat: bump version to 0.8.0 in pyproject.toml and uv.lock by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/38
+
 ## [v0.7.0](https://github.com/creative-graphic-design/layout-prompter/compare/v0.6.0...v0.7.0) - 2025-07-15
 - fix: update license type from MIT to Apache Software License in pypro… by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/33
 - feat: refactor layout components to use RunnableSerializable and enha… by @shunk031 in https://github.com/creative-graphic-design/layout-prompter/pull/31
